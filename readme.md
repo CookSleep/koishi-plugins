@@ -110,6 +110,10 @@ MIT © 2024-present chatluna-affinity contributors
 
 ## 更新日志
 
+0.2.4
+- userInfo 变量新增 chatCount 字段，可展示聊天次数
+- 修复状态改变后 XML 工具拦截失效的问题
+
 0.2.3
 - OneBot 协议新增 NapCat/LLBot 独立选项，按配置选择协议
 

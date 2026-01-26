@@ -16,6 +16,7 @@ export type MemberInfoField =
     | 'area'
     | 'joinTime'
     | 'lastSentTime'
+    | 'chatCount'
 
 export interface MemberInfo {
     card?: string
@@ -66,6 +67,7 @@ export interface RenderMemberInfoOptions {
     defaultItems?: MemberInfoField[]
     logUnknown?: boolean
     log?: LogFn
+    chatCount?: number
 }
 
 export interface GroupInfo {

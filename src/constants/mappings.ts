@@ -73,5 +73,6 @@ export const ALL_MEMBER_INFO_ITEMS = [
     'age',
     'area',
     'joinTime',
-    'lastSentTime'
+    'lastSentTime',
+    'chatCount'
 ] as const

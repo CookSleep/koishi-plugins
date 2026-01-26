@@ -266,10 +266,74 @@ export function apply(ctx: Context, config: Config): void {
     })
     ctx.middleware(blacklistGuard.middleware as Parameters<typeof ctx.middleware>[0], true)
 
+    const affinityInitCache = new Set<string>()
+    const makeAffinityInitKey = (session: Session): string =>
+        `${session.platform || 'unknown'}:${session.selfId || 'self'}:${session.userId || 'unknown'}`
+
+    ctx.middleware(async (session, next) => {
+        if (config.affinityEnabled) {
+            const platform = session?.platform
+            const userId = session?.userId
+            const selfId = session?.selfId
+            if (platform && userId && selfId && userId !== selfId) {
+                const key = makeAffinityInitKey(session)
+                if (!affinityInitCache.has(key)) {
+                    affinityInitCache.add(key)
+                    try {
+                        const state = await store.ensureForUser(
+                            session,
+                            userId,
+                            (value, low, high) => Math.min(Math.max(value, low), high)
+                        )
+                        if (state.isNew && config.debugLogging) {
+                            log('debug', '已初始化好感度记录', { platform, selfId, userId })
+                        }
+                    } catch (error) {
+                        affinityInitCache.delete(key)
+                        log('warn', '初始化好感度失败', error)
+                    }
+                }
+            }
+        }
+        return next()
+    })
+
     let rawModelResponseGuildId: string | null = null
     const rawModelResponseSessionMap = new Map<string, Session>()
     let lastCharacterSession: Session | null = null
-    let rawInterceptorRetryHandle: (() => void) | null = null
+    let rawInterceptorMonitorHandle: (() => void) | null = null
+    let rawInterceptorFastRetryHandle: (() => void) | null = null
+    let rawInterceptorReady = false
+    let rawInterceptorService: unknown | null = null
+    let rawInterceptorLogger: { debug?: (...args: unknown[]) => void } | null = null
+    let rawInterceptorOriginalDebug: ((...args: unknown[]) => void) | null = null
+    let rawCollectorBound = false
+    let rawInterceptorDisposeBound = false
+    const RAW_INTERCEPTOR_TAG = '__chatlunaAffinityRawInterceptor'
+    const RAW_INTERCEPTOR_MONITOR_INTERVAL = 5 * 1000
+    const RAW_INTERCEPTOR_FAST_INTERVAL = 3 * 1000
+
+    const restoreRawModelInterceptor = (): void => {
+        if (rawInterceptorLogger && rawInterceptorOriginalDebug) {
+            rawInterceptorLogger.debug = rawInterceptorOriginalDebug
+        }
+        rawInterceptorLogger = null
+        rawInterceptorOriginalDebug = null
+    }
+
+    const isRawInterceptorActive = (): boolean => {
+        const characterService = (
+            ctx as unknown as {
+                chatluna_character?: {
+                    logger?: {
+                        debug?: (...args: unknown[]) => void
+                    }
+                }
+            }
+        ).chatluna_character
+        const debugFn = characterService?.logger?.debug as unknown as { [key: string]: boolean } | undefined
+        return Boolean(debugFn?.[RAW_INTERCEPTOR_TAG])
+    }
 
     const initRawModelInterceptor = (): boolean => {
         const characterService = (
@@ -283,28 +347,44 @@ export function apply(ctx: Context, config: Config): void {
             }
         ).chatluna_character
         if (!characterService) return false
+        if (rawInterceptorService !== characterService) {
+            rawInterceptorService = characterService
+            rawCollectorBound = false
+        }
 
-        characterService.collect?.(async (session: Session) => {
-            const guildId =
-                (session as unknown as { guildId?: string })?.guildId ||
-                session?.channelId ||
-                session?.userId ||
-                null
-            rawModelResponseGuildId = guildId
-            if (guildId) rawModelResponseSessionMap.set(guildId, session)
-            lastCharacterSession = session
-        })
+        if (!rawCollectorBound && typeof characterService.collect === 'function') {
+            characterService.collect?.(async (session: Session) => {
+                const guildId =
+                    (session as unknown as { guildId?: string })?.guildId ||
+                    session?.channelId ||
+                    session?.userId ||
+                    null
+                rawModelResponseGuildId = guildId
+                if (guildId) rawModelResponseSessionMap.set(guildId, session)
+                lastCharacterSession = session
+            })
+            rawCollectorBound = true
+        }
 
         const characterLogger = characterService.logger
         if (!characterLogger || typeof characterLogger.debug !== 'function') return false
 
-        const originalDebug = characterLogger.debug.bind(characterLogger)
-        characterLogger.debug = (...args: unknown[]) => {
-            originalDebug(...args)
-            const message = args[0]
-            if (typeof message === 'string' && message.startsWith('model response: ')) {
+        const taggedDebug = characterLogger.debug as unknown as { [key: string]: boolean }
+        if (!taggedDebug[RAW_INTERCEPTOR_TAG]) {
+            restoreRawModelInterceptor()
+            const originalDebug = characterLogger.debug.bind(characterLogger)
+            const wrappedDebug = (...args: unknown[]) => {
+                originalDebug(...args)
+                const message = args[0]
+                if (typeof message !== 'string' || !message.startsWith('model response: ')) return
                 const response = message.substring('model response: '.length)
-                if (!rawModelResponseGuildId || !response) return
+                if (!response) return
+                if (!rawModelResponseGuildId) {
+                    log('warn', '拦截到原始输出但缺少会话上下文，XML 工具不会执行', {
+                        length: response.length
+                    })
+                    return
+                }
                 if (config.debugLogging) {
                     log('debug', '拦截到原始输出', {
                         guildId: rawModelResponseGuildId,
@@ -323,7 +403,9 @@ export function apply(ctx: Context, config: Config): void {
                     if (session) {
                         for (const match of affinityMatches) {
                             const delta = parseInt(String(match[1] || '0').trim(), 10)
-                            const action = String(match[2] || 'increase').trim().toLowerCase() as 'increase' | 'decrease'
+                            const action = String(match[2] || 'increase')
+                                .trim()
+                                .toLowerCase() as 'increase' | 'decrease'
                             const userId = String(match[3] || '').trim()
                             if (!isNaN(delta) && delta > 0 && userId) {
                                 void applyAffinityDelta({
@@ -431,38 +513,80 @@ export function apply(ctx: Context, config: Config): void {
                     }
                 }
             }
+            ;(wrappedDebug as unknown as { [key: string]: boolean })[RAW_INTERCEPTOR_TAG] = true
+            characterLogger.debug = wrappedDebug
+            rawInterceptorLogger = characterLogger
+            rawInterceptorOriginalDebug = originalDebug
         }
-        ctx.on('dispose', () => {
-            characterLogger.debug = originalDebug
-        })
+        if (!rawInterceptorDisposeBound) {
+            ctx.on('dispose', () => {
+                restoreRawModelInterceptor()
+            })
+            rawInterceptorDisposeBound = true
+        }
         return true
     }
 
-    const startRawInterceptorRetry = (): void => {
-        if (rawInterceptorRetryHandle) return
-        rawInterceptorRetryHandle = ctx.setInterval(() => {
-            log('info', '原始输出拦截重试中...')
-            if (initRawModelInterceptor()) {
-                log('info', '原始输出拦截重试成功')
-                if (rawInterceptorRetryHandle) {
-                    rawInterceptorRetryHandle()
-                    rawInterceptorRetryHandle = null
-                }
+    const stopRawInterceptorFastRetry = (): void => {
+        if (!rawInterceptorFastRetryHandle) return
+        rawInterceptorFastRetryHandle()
+        rawInterceptorFastRetryHandle = null
+    }
+
+    const startRawInterceptorFastRetry = (): void => {
+        if (rawInterceptorFastRetryHandle) return
+        rawInterceptorFastRetryHandle = ctx.setInterval(() => {
+            if (isRawInterceptorActive()) {
+                rawInterceptorReady = true
+                stopRawInterceptorFastRetry()
+                return
             }
-        }, 10 * 60 * 1000)
+            const ready = initRawModelInterceptor()
+            if (ready && !rawInterceptorReady) {
+                log('info', '原始输出拦截已恢复')
+            }
+            rawInterceptorReady = ready
+            if (ready) stopRawInterceptorFastRetry()
+        }, RAW_INTERCEPTOR_FAST_INTERVAL)
+    }
+
+    const ensureRawInterceptorActive = (): void => {
+        if (isRawInterceptorActive()) {
+            rawInterceptorReady = true
+            stopRawInterceptorFastRetry()
+            return
+        }
+        const ready = initRawModelInterceptor()
+        if (ready && !rawInterceptorReady) {
+            log('info', '原始输出拦截已恢复')
+        }
+        rawInterceptorReady = ready
+        if (!ready) startRawInterceptorFastRetry()
+    }
+
+    const startRawInterceptorMonitor = (): void => {
+        if (rawInterceptorMonitorHandle) return
+        rawInterceptorMonitorHandle = ctx.setInterval(() => {
+            const wasReady = rawInterceptorReady
+            ensureRawInterceptorActive()
+            if (!rawInterceptorReady && wasReady) {
+                log('warn', '原始输出拦截失效，将继续重试')
+            }
+        }, RAW_INTERCEPTOR_MONITOR_INTERVAL)
     }
 
     const startDelay = 3000
     log('debug', `原始输出拦截将在 ${startDelay}ms 后启动`)
     ctx.setTimeout(() => {
-        if (initRawModelInterceptor()) {
+        rawInterceptorReady = initRawModelInterceptor()
+        if (rawInterceptorReady) {
             log('info', '已启用原始输出拦截模式')
         } else {
-            log('warn', 'chatluna_character 服务不可用，将每10分钟重试一次')
-            startRawInterceptorRetry()
+            log('warn', 'chatluna_character 服务不可用，将每3秒重试一次')
+            startRawInterceptorFastRetry()
         }
+        startRawInterceptorMonitor()
     }, startDelay)
-
 
     const fetchMemberBound = (session: Session, userId: string) => fetchMember(session, userId)
     const resolveUserIdentityBound = (session: Session, input: string) =>
@@ -578,7 +702,8 @@ export function apply(ctx: Context, config: Config): void {
         const userInfoProvider = createUserInfoProvider({
             config,
             log,
-            fetchMember: fetchMemberBound
+            fetchMember: fetchMemberBound,
+            store
         })
         const userInfoName = String(
             config.userInfo?.variableName || config.otherVariables?.userInfo?.variableName || 'userInfo'

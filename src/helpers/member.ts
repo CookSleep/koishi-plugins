@@ -51,6 +51,7 @@ interface RenderFieldOptions {
     fallbackNames?: string[]
     logUnknown?: boolean
     log?: LogFn
+    chatCount?: number
 }
 
 export function renderInfoField(
@@ -141,6 +142,12 @@ export function renderInfoField(
             const formatted = formatDateTime(ts)
             return formatted ? `活跃:${formatted}` : null
         }
+        case 'chatCount': {
+            const rawCount = options.chatCount
+            const numeric = Number(rawCount)
+            if (!Number.isFinite(numeric)) return null
+            return `聊天次数:${Math.max(0, Math.round(numeric))}`
+        }
         default:
             return null
     }
@@ -193,7 +200,8 @@ export function renderMemberInfo(
             userId,
             fallbackNames,
             logUnknown,
-            log
+            log,
+            chatCount: options.chatCount
         })
         if (rendered) parts.push(rendered)
     }

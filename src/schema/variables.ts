@@ -12,7 +12,7 @@ export const OtherVariablesSchema = Schema.object({
         items: Schema.array(
             Schema.union([
                 Schema.const('userId').description('用户 ID'),
-                Schema.const('nickname').description('显示名称'),
+                Schema.const('nickname').description('群昵称'),
                 Schema.const('role').description('群内身份'),
                 Schema.const('level').description('群等级'),
                 Schema.const('title').description('群头衔'),
@@ -20,7 +20,8 @@ export const OtherVariablesSchema = Schema.object({
                 Schema.const('age').description('年龄'),
                 Schema.const('area').description('地区'),
                 Schema.const('joinTime').description('入群时间'),
-                Schema.const('lastSentTime').description('最后发言时间')
+                Schema.const('lastSentTime').description('最后发言时间'),
+                Schema.const('chatCount').description('聊天次数')
             ])
         )
             .role('checkbox')
@@ -34,7 +35,7 @@ export const OtherVariablesSchema = Schema.object({
         items: Schema.array(
             Schema.union([
                 Schema.const('userId').description('机器人 ID'),
-                Schema.const('nickname').description('显示名称'),
+                Schema.const('nickname').description('群昵称'),
                 Schema.const('role').description('群内身份'),
                 Schema.const('level').description('群等级'),
                 Schema.const('title').description('群头衔'),
