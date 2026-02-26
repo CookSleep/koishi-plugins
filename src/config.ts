@@ -25,6 +25,8 @@ export interface Config {
   renderMemeListAsImage: boolean;
   enableDirectAliasWithoutPrefix: boolean;
   allowMentionPrefixDirectAliasTrigger: boolean;
+  enableMemeXmlTool: boolean;
+  memeXmlReferencePrompt?: string;
   enableRandomDedupeWithinHours: boolean;
   randomDedupeWindowHours: number;
   enableRandomKeywordNotice: boolean;
@@ -51,26 +53,29 @@ export const defaultConfig: Config = {
     },
     {
       source: "user-nickname",
-      enabled: false,
+      enabled: true,
       weight: 100,
     },
   ],
   autoUseAvatarWhenMinImagesOneAndNoImage: true,
   autoFillOneMissingImageWithAvatar: true,
   autoFillSenderAndBotAvatarsWhenMinImagesTwoAndNoImage: true,
-  autoUseGroupNicknameWhenNoDefaultText: false,
-  renderMemeListAsImage: false,
+  autoUseGroupNicknameWhenNoDefaultText: true,
+  renderMemeListAsImage: true,
   enableDirectAliasWithoutPrefix: true,
   allowMentionPrefixDirectAliasTrigger: false,
-  enableRandomDedupeWithinHours: false,
+  enableMemeXmlTool: false,
+  memeXmlReferencePrompt:
+    '可用 XML 工具调用格式：<meme key="memekey" text="text1|text2" image"url1|url2" at="userid1|userid2"/>\n支持参数：key、text、image、at\n示例：<meme key="can_can_need" at="123456"/>\n如果缺少参数，会按预设的补全设置自动补全',
+  enableRandomDedupeWithinHours: true,
   randomDedupeWindowHours: 24,
-  enableRandomKeywordNotice: false,
+  enableRandomKeywordNotice: true,
   enablePokeTriggerRandom: false,
   pokeTriggerCooldownSeconds: 0,
   enableInfoFetchConcurrencyLimit: false,
   infoFetchConcurrency: 10,
   initLoadRetryTimes: 3,
-  disableErrorReplyToPlatform: false,
+  disableErrorReplyToPlatform: true,
   excludeTextOnlyMemes: false,
   excludeImageOnlyMemes: false,
   excludeImageAndTextMemes: false,
@@ -162,6 +167,13 @@ const triggerSchema = Schema.object({
   allowMentionPrefixDirectAliasTrigger: Schema.boolean()
     .default(defaultConfig.allowMentionPrefixDirectAliasTrigger)
     .description("是否允许贴合参数触发（如 看看你的xxxx@user1@user2）"),
+  enableMemeXmlTool: Schema.boolean()
+    .default(defaultConfig.enableMemeXmlTool)
+    .description("是否启用 XML 形式的 meme 工具调用"),
+  memeXmlReferencePrompt: Schema.string()
+    .role("textarea")
+    .default(defaultConfig.memeXmlReferencePrompt || "")
+    .description("参考提示词"),
 }).description("触发方式设置");
 
 const filterSchema = Schema.object({

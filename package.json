@@ -1,7 +1,7 @@
 {
   "name": "koishi-plugin-chatluna-meme-generator",
-  "version": "0.0.2",
-  "description": "Koishi plugin for meme-generator-main backend",
+  "version": "0.0.3",
+  "description": "仅支持 python 的 meme-generator，并为 chatluna 提供 xml 形式的工具调用",
   "main": "lib/index.js",
   "types": "lib/index.d.ts",
   "files": [
@@ -46,7 +46,8 @@
       ],
       "optional": [
         "notifier",
-        "puppeteer"
+        "puppeteer",
+        "chatluna_character"
       ]
     }
   }

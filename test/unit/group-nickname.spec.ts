@@ -115,15 +115,23 @@ function createBaseConfig(): Config {
     autoFillOneMissingImageWithAvatar: false,
     autoFillSenderAndBotAvatarsWhenMinImagesTwoAndNoImage: false,
     autoUseGroupNicknameWhenNoDefaultText: true,
+    renderMemeListAsImage: false,
     enableDirectAliasWithoutPrefix: false,
     allowMentionPrefixDirectAliasTrigger: false,
+    enableMemeXmlTool: false,
     enableRandomDedupeWithinHours: false,
     randomDedupeWindowHours: 24,
     enableRandomKeywordNotice: false,
+    enablePokeTriggerRandom: false,
+    pokeTriggerCooldownSeconds: 0,
     enableInfoFetchConcurrencyLimit: false,
     infoFetchConcurrency: 10,
     initLoadRetryTimes: 3,
     disableErrorReplyToPlatform: false,
+    excludeTextOnlyMemes: false,
+    excludeImageOnlyMemes: false,
+    excludeImageAndTextMemes: false,
+    excludedMemeKeys: [],
   };
 }
 

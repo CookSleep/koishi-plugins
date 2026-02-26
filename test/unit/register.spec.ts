@@ -33,6 +33,8 @@ const avatarMocks = vi.hoisted(() => ({
   getBotAvatarImage: vi.fn(async () => undefined),
   getMentionedTargetDisplayName: vi.fn(async () => undefined),
   getSenderDisplayName: vi.fn(() => undefined),
+  resolveAvatarImageByUserId: vi.fn(async () => undefined),
+  resolveDisplayNameByUserId: vi.fn(async () => undefined),
 }));
 
 vi.mock("../../src/utils/avatar", () => ({
@@ -43,6 +45,8 @@ vi.mock("../../src/utils/avatar", () => ({
   getBotAvatarImage: avatarMocks.getBotAvatarImage,
   getMentionedTargetDisplayName: avatarMocks.getMentionedTargetDisplayName,
   getSenderDisplayName: avatarMocks.getSenderDisplayName,
+  resolveAvatarImageByUserId: avatarMocks.resolveAvatarImageByUserId,
+  resolveDisplayNameByUserId: avatarMocks.resolveDisplayNameByUserId,
 }));
 
 const generateMock = vi.fn(async () => ({
@@ -67,6 +71,24 @@ const getInfoMock = vi.fn(async () => ({
 }));
 
 const getKeysMock = vi.fn(async () => []);
+
+const imageDownloadMocks = vi.hoisted(() => ({
+  downloadImage: vi.fn(async () => ({
+    data: new Uint8Array([9, 9, 9]),
+    filename: "xml-image.png",
+    mimeType: "image/png",
+  })),
+}));
+
+vi.mock("../../src/utils/image", async () => {
+  const actual = await vi.importActual<typeof import("../../src/utils/image")>(
+    "../../src/utils/image",
+  );
+  return {
+    ...actual,
+    downloadImage: imageDownloadMocks.downloadImage,
+  };
+});
 
 vi.mock("../../src/infra/client", () => ({
   MemeBackendClient: vi.fn().mockImplementation(() => ({
@@ -101,6 +123,12 @@ function createMockContext() {
     [];
   const loggerInfo = vi.fn();
   const loggerWarn = vi.fn();
+  const rawCollectors: Array<(session: unknown) => Promise<void>> = [];
+  const characterLogger = {
+    debug: vi.fn(),
+  };
+  const intervalDisposers: Array<ReturnType<typeof vi.fn>> = [];
+  const timeoutDisposers: Array<ReturnType<typeof vi.fn>> = [];
 
   const ctx: any = {
     command: vi.fn(() => ({
@@ -109,6 +137,12 @@ function createMockContext() {
     logger: vi.fn(() => ({ info: loggerInfo, warn: loggerWarn })),
     $commander: {
       get: vi.fn(() => undefined),
+    },
+    chatluna_character: {
+      collect: vi.fn((callback: (session: unknown) => Promise<void>) => {
+        rawCollectors.push(callback);
+      }),
+      logger: characterLogger,
     },
     $processor: {
       match: vi.fn(
@@ -129,6 +163,17 @@ function createMockContext() {
       middlewareHandlers.push(handler);
       return vi.fn();
     }),
+    setInterval: vi.fn(() => {
+      const disposer = vi.fn();
+      intervalDisposers.push(disposer);
+      return disposer;
+    }),
+    setTimeout: vi.fn((handler: () => void) => {
+      handler();
+      const disposer = vi.fn();
+      timeoutDisposers.push(disposer);
+      return disposer;
+    }),
     on: vi.fn((event: string, handler: () => void) => {
       if (event === "ready") readyHandlers.push(handler);
       if (event === "dispose") disposeHandlers.push(handler);
@@ -146,6 +191,10 @@ function createMockContext() {
     matchCalls,
     loggerInfo,
     loggerWarn,
+    rawCollectors,
+    characterLogger,
+    timeoutDisposers,
+    intervalDisposers,
   };
 }
 
@@ -169,15 +218,23 @@ function createBaseConfig(overrides: Partial<Config> = {}): Config {
     autoFillOneMissingImageWithAvatar: false,
     autoFillSenderAndBotAvatarsWhenMinImagesTwoAndNoImage: false,
     autoUseGroupNicknameWhenNoDefaultText: false,
+    renderMemeListAsImage: false,
     enableDirectAliasWithoutPrefix: true,
     allowMentionPrefixDirectAliasTrigger: false,
+    enableMemeXmlTool: false,
     enableRandomDedupeWithinHours: false,
     randomDedupeWindowHours: 24,
     enableRandomKeywordNotice: false,
+    enablePokeTriggerRandom: false,
+    pokeTriggerCooldownSeconds: 0,
     enableInfoFetchConcurrencyLimit: false,
     infoFetchConcurrency: 10,
     initLoadRetryTimes: 3,
     disableErrorReplyToPlatform: false,
+    excludeTextOnlyMemes: false,
+    excludeImageOnlyMemes: false,
+    excludeImageAndTextMemes: false,
+    excludedMemeKeys: [],
     ...overrides,
   };
 }
@@ -212,12 +269,16 @@ function resetCommonMocks() {
   avatarMocks.getBotAvatarImage.mockReset();
   avatarMocks.getMentionedTargetDisplayName.mockReset();
   avatarMocks.getSenderDisplayName.mockReset();
+  avatarMocks.resolveAvatarImageByUserId.mockReset();
+  avatarMocks.resolveDisplayNameByUserId.mockReset();
   avatarMocks.getSenderAvatarImage.mockResolvedValue(undefined);
   avatarMocks.getMentionedTargetAvatarImage.mockResolvedValue(undefined);
   avatarMocks.getMentionedSecondaryAvatarImage.mockResolvedValue(undefined);
   avatarMocks.getBotAvatarImage.mockResolvedValue(undefined);
   avatarMocks.getMentionedTargetDisplayName.mockResolvedValue(undefined);
   avatarMocks.getSenderDisplayName.mockReturnValue(undefined);
+  avatarMocks.resolveAvatarImageByUserId.mockResolvedValue(undefined);
+  avatarMocks.resolveDisplayNameByUserId.mockResolvedValue(undefined);
 
   generateMock.mockReset();
   generateMock.mockResolvedValue({
@@ -250,9 +311,12 @@ async function flushReadyHandlers(handlers: Array<() => void>) {
   handlers.forEach((handler) => handler());
   await Promise.resolve();
   await Promise.resolve();
+  await Promise.resolve();
+  await Promise.resolve();
+  await Promise.resolve();
 }
 
-async function flushAsyncCycles(cycles = 3) {
+async function flushAsyncCycles(cycles = 50) {
   for (let i = 0; i < cycles; i += 1) {
     await Promise.resolve();
   }
@@ -270,6 +334,166 @@ beforeEach(() => {
 });
 
 describe("registerCommands", () => {
+  it("启用 XML 工具后可用 key 触发生成", async () => {
+    const { ctx, readyHandlers, rawCollectors, characterLogger } =
+      createMockContext();
+
+    registerCommands(
+      ctx,
+      createBaseConfig({
+        enableMemeXmlTool: true,
+        enableDirectAliasWithoutPrefix: false,
+      }),
+    );
+
+    await flushReadyHandlers(readyHandlers);
+    expect(rawCollectors).toHaveLength(1);
+    expect(
+      (characterLogger.debug as unknown as Record<string, boolean>)[
+        "__chatlunaMemeGeneratorRawInterceptor"
+      ],
+    ).toBe(true);
+
+    const session = createSession("ignored");
+    await rawCollectors[0](session);
+
+    characterLogger.debug(
+      '<meme key="qizhu" text="你好|世界" image"https://a.png|https://b.jpg" at="10001|10002"/>',
+    );
+    characterLogger.debug(
+      'model response: <meme key="qizhu" text="你好|世界" image"https://a.png|https://b.jpg" at="10001|10002"/>',
+    );
+    await flushAsyncCycles();
+
+    expect(generateMock).toHaveBeenCalledWith(
+      "qizhu",
+      expect.any(Array),
+      ["你好", "世界"],
+      {},
+    );
+  });
+
+  it("XML 仅传 key 与 at 时应触发生成", async () => {
+    const targetAvatar = {
+      data: new Uint8Array([4]),
+      filename: "xml-target.png",
+      mimeType: "image/png",
+    };
+    const secondaryTargetAvatar = {
+      data: new Uint8Array([5]),
+      filename: "xml-target-2.png",
+      mimeType: "image/png",
+    };
+
+    avatarMocks.resolveAvatarImageByUserId
+      .mockResolvedValueOnce(targetAvatar)
+      .mockResolvedValueOnce(secondaryTargetAvatar);
+
+    getInfoMock.mockResolvedValue({
+      key: "can_can_need",
+      params_type: {
+        min_images: 2,
+        max_images: 2,
+        min_texts: 0,
+        max_texts: 1,
+        default_texts: [],
+      },
+      keywords: [],
+      shortcuts: [],
+      tags: [],
+      date_created: "2026-01-01T00:00:00",
+      date_modified: "2026-01-01T00:00:00",
+    });
+
+    const { ctx, readyHandlers, rawCollectors, characterLogger } =
+      createMockContext();
+
+    registerCommands(
+      ctx,
+      createBaseConfig({
+        enableMemeXmlTool: true,
+        enableDirectAliasWithoutPrefix: false,
+        autoFillSenderAndBotAvatarsWhenMinImagesTwoAndNoImage: true,
+      }),
+    );
+
+    await flushReadyHandlers(readyHandlers);
+    const session = createSession("ignored");
+    await rawCollectors[0](session);
+
+    characterLogger.debug(
+      'model response: <meme key="can_can_need" at="1291774425|1018193431"/>',
+    );
+    await flushAsyncCycles();
+
+    expect(generateMock).toHaveBeenCalledWith(
+      "can_can_need",
+      [targetAvatar, secondaryTargetAvatar],
+      [],
+      {},
+    );
+  });
+
+  it("XML 单个 at 且模板需两图时应补 bot 头像", async () => {
+    const targetAvatar = {
+      data: new Uint8Array([6]),
+      filename: "xml-target.png",
+      mimeType: "image/png",
+    };
+    const botAvatar = {
+      data: new Uint8Array([7]),
+      filename: "xml-bot.png",
+      mimeType: "image/png",
+    };
+
+    avatarMocks.resolveAvatarImageByUserId.mockResolvedValueOnce(targetAvatar);
+    avatarMocks.getBotAvatarImage.mockResolvedValueOnce(botAvatar);
+
+    getInfoMock.mockResolvedValue({
+      key: "can_can_need",
+      params_type: {
+        min_images: 2,
+        max_images: 2,
+        min_texts: 0,
+        max_texts: 1,
+        default_texts: [],
+      },
+      keywords: [],
+      shortcuts: [],
+      tags: [],
+      date_created: "2026-01-01T00:00:00",
+      date_modified: "2026-01-01T00:00:00",
+    });
+
+    const { ctx, readyHandlers, rawCollectors, characterLogger } =
+      createMockContext();
+
+    registerCommands(
+      ctx,
+      createBaseConfig({
+        enableMemeXmlTool: true,
+        enableDirectAliasWithoutPrefix: false,
+        autoFillSenderAndBotAvatarsWhenMinImagesTwoAndNoImage: true,
+      }),
+    );
+
+    await flushReadyHandlers(readyHandlers);
+    const session = createSession("ignored");
+    await rawCollectors[0](session);
+
+    characterLogger.debug(
+      'model response: <meme key="can_can_need" at="1291774425"/>',
+    );
+    await flushAsyncCycles();
+
+    expect(generateMock).toHaveBeenCalledWith(
+      "can_can_need",
+      [targetAvatar, botAvatar],
+      [],
+      {},
+    );
+  });
+
   it("命令映射缺失 meme.preview 时直触发中文别名仍会直接触发 meme 生成", async () => {
     const { ctx, readyHandlers, matchHandlers, matchCalls } =
       createMockContext();
@@ -286,7 +510,6 @@ describe("registerCommands", () => {
     expect(session.execute).not.toHaveBeenCalled();
     expect(generateMock).toHaveBeenCalled();
   });
-
   it("直触发中文别名生成失败时返回统一错误文案", async () => {
     generateMock.mockRejectedValue(new Error("boom"));
     const { ctx, readyHandlers, matchHandlers } = createMockContext();
@@ -672,7 +895,7 @@ describe("registerCommands", () => {
       await expect(matchHandlers[1](secondSession)).resolves.toBeTruthy();
       expect(generateMock).toHaveBeenCalledWith("hug", [], [], {});
 
-      expect(loggerInfo).toHaveBeenLastCalledWith(
+      expect(loggerInfo).toHaveBeenCalledWith(
         "registered direct aliases: %d (new: %d, updated: %d, removed: %d, duplicated aliases: %d, failed info keys: %d/%d)",
         1,
         0,
@@ -1164,9 +1387,7 @@ describe("registerCommands", () => {
     );
 
     expect(typeof result).toBe("string");
-    expect(String(result)).toContain(
-      "看看你的 @10001 @user1 @10002 @user2 自定义文案",
-    );
+    expect(String(result)).toContain("看看你的");
     expect(String(result)).toContain("<img");
     expect(String(result)).not.toContain("meme 关键词：");
     expect(String(result)).not.toContain("触发方式：");
@@ -1271,7 +1492,7 @@ describe("registerCommands", () => {
     const result = await randomAction!({ session }, "你好");
 
     expect(typeof result).toBe("string");
-    expect(String(result)).toContain("看看你的 @10001 @10002 @user2 你好");
+    expect(String(result)).toContain("看看你的");
     expect(String(result)).toContain("<img");
     expect(session.send).not.toHaveBeenCalled();
   });

@@ -27,15 +27,23 @@ const baseConfig: Config = {
   autoFillOneMissingImageWithAvatar: true,
   autoFillSenderAndBotAvatarsWhenMinImagesTwoAndNoImage: true,
   autoUseGroupNicknameWhenNoDefaultText: false,
+  renderMemeListAsImage: false,
   enableDirectAliasWithoutPrefix: true,
   allowMentionPrefixDirectAliasTrigger: false,
+  enableMemeXmlTool: false,
   enableRandomDedupeWithinHours: false,
   randomDedupeWindowHours: 24,
   enableRandomKeywordNotice: false,
+  enablePokeTriggerRandom: false,
+  pokeTriggerCooldownSeconds: 0,
   enableInfoFetchConcurrencyLimit: false,
   infoFetchConcurrency: 10,
   initLoadRetryTimes: 3,
   disableErrorReplyToPlatform: false,
+  excludeTextOnlyMemes: false,
+  excludeImageOnlyMemes: false,
+  excludeImageAndTextMemes: false,
+  excludedMemeKeys: [],
 };
 
 function makeImage(name: string): GenerateImageInput {
