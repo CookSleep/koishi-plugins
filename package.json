@@ -1,0 +1,57 @@
+{
+  "name": "koishi-plugin-chatluna-schedule",
+  "description": "为 ChatLuna Character 提供 bot 的今日日程能力。",
+  "version": "0.0.1",
+  "main": "lib/index.js",
+  "typings": "lib/index.d.ts",
+  "files": [
+    "lib"
+  ],
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/Sor85/koishi-plugin-chatluna-schedule"
+  },
+  "license": "MIT",
+  "scripts": {
+    "build": "tsup",
+    "test": "vitest run",
+    "test:coverage": "vitest run --coverage",
+    "watch": "tsup --watch",
+    "clean": "rimraf lib"
+  },
+  "keywords": [
+    "chatbot",
+    "koishi",
+    "plugin"
+  ],
+  "koishi": {
+    "description": {
+      "zh": "ChatLuna 日程与天气插件"
+    }
+  },
+  "peerDependencies": {
+    "koishi": "^4.18.7",
+    "koishi-plugin-chatluna": "*"
+  },
+  "peerDependenciesMeta": {
+    "koishi-plugin-chatluna-character": {
+      "optional": true
+    },
+    "koishi-plugin-puppeteer": {
+      "optional": true
+    }
+  },
+  "devDependencies": {
+    "@types/node": "^20.11.0",
+    "@vitest/coverage-v8": "^2.1.8",
+    "koishi": "^4.18.7",
+    "rimraf": "^5.0.5",
+    "tsup": "^8.0.0",
+    "typescript": "^5.3.3",
+    "vitest": "^2.1.8"
+  },
+  "dependencies": {
+    "@langchain/core": "^0.3.62",
+    "zod": "^3.23.8"
+  }
+}
