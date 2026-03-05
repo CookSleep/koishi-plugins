@@ -1,99 +1,107 @@
 # koishi-plugin-chatluna-affinity
 
-为 ChatLuna Character 提供「好感度」「关系」「工具」等一整套 Affinity 能力。
+一个面向 ChatLuna Character 的 Koishi 插件，提供可持久化的好感度、关系、黑名单与用户自定义昵称能力，并支持通过 XML 动作在对话过程中直接驱动状态更新。
 
-## 特性速览
+## 项目简介
 
-1. **好感度模型**：采用「系数 × 长期好感」的复合结果，短期情绪仅作为分析输入。
-2. **互动系数**：记录每日 increase/decrease，满足"连续互动且 increase > decrease"或"长时间未互动/负向占优"时，按天数累积提升或衰减系数。
-3. **自定义关系链**：提供好感度区间→关系映射、特殊关系配置、自动调整工具，便于角色扮演差异化。
-4. **多工具联动**：支持手动调整好感、切换关系、管理黑名单等实用工具。
-5. **查看状态**：
-   - `affinity.inspect`：查看好感度、长期好感、短期好感、系数、连续互动天数。
-   - `affinity.rank`：查看排行榜，支持文本/图片输出。
+本插件聚焦「角色互动状态管理」，核心目标是让模型在生成回复时能够基于长期互动上下文做出稳定、可追踪的行为决策。
 
-## 核心概念
+你可以把它理解为四个核心模块：
 
-| 概念 | 说明 |
-| --- | --- |
-| 好感度 | `affinity()` 变量与 `{affinity}` 模板均返回「系数 × 长期好感」，实时缓存与数据库一致。 |
-| 长期好感度 | 代表关系基准，满足短期阈值后才会被调节。 |
-| 短期好感度 | 描述即时情绪波动，仅用于分析与可视化，不直接参与最终结果。 |
-| 互动系数 | 记录连续天数与日增减。`increase > decrease` 时提升，长时间未互动或 `decrease > increase` 则衰减。 |
-| 关系 | 根据好感度区间自动匹配的称谓，也可为特定用户配置特殊关系。 |
+- 好感度：长期/短期状态与系数联动
+- 关系：按好感区间自动映射 + 手动指定特殊关系
+- 黑名单：永久/临时拉黑与自动拦截
+- 用户自定义昵称：为指定用户存储专属称呼
 
-## 好感度是如何计算的
+## 功能一览
 
-1. **长期好感度 (LongTerm Affinity)**
-   - 存储于数据库 `longTermAffinity` 字段，由短期阈值触发的 promote/demote 事件在 `longTermPromoteStep` / `longTermDemoteStep` 控制下递增或递减。
-   - 任何手动调整（如 `adjust_affinity`）会直接写入该值并同步关系。
+- 支持命令管理：查看排行、查看详情、调整好感、黑名单管理、清库
+- 支持 ChatLuna 变量注入：`affinity`、`relationshipAffinityLevel`、`blacklistList`、`userAlias`
+- 支持原生工具（可选注册）：关系工具、黑名单工具
+- 支持 XML 动作调用：好感度、黑名单、关系、自定义昵称
+- 数据写入 Koishi `ctx.database`，支持跨重启持久化
 
-2. **互动系数 (Coefficient)**
-   - 基于 `affinityDynamics.coefficient` 配置，包含 `base`、`maxDrop`、`maxBoost`、`decayPerDay`、`boostPerDay`。
-   - 每日统计 `increase` / `decrease` 次数：
-     - 长时间未互动或 `decrease > increase` → 按天数衰减，累计不超过 `maxDrop`。
-     - 连续互动且 `increase > decrease` → 按连续天数提升，累计不超过 `maxBoost`。
-   - 结果保存到 `coefficientState` 中（含 `coefficient` 与 `streak`）。
+## 快速上手
 
-3. **综合好感度 (Composite Affinity)**
-   - 计算公式：`composite = clamp(coefficient * longTermAffinity, min, max)`。
-   - `affinity()` 变量、`{affinity}` 模板与提示词 `{{currentAffinity}}` 均使用该值。
-   - 写入数据库的字段为 `affinityOverride`，供后续读取与缓存。
+### 1) 使用默认配置启动
 
-4. **历史与上下文参与方式**
-   - 短期好感度、历史上下文、Bot 回复等信息只影响模型输出的 `delta`，不会直接参与最终公式。
-   - 每次模型执行产生的行动记录会写入 `actionStats`，下一次分析会参考这些数据决定阈值与提示信息。
+默认配置可直接运行，建议优先确认：
 
-## 变量与模板占位符
+- `affinityEnabled = true`
+- `xmlToolSettings.enableAffinityXmlToolCall = true`
+- `xmlToolSettings.enableBlacklistXmlToolCall = true`
+- `xmlToolSettings.enableRelationshipXmlToolCall = true`
+- `xmlToolSettings.enableUserAliasXmlToolCall = true`
 
-| 变量 | 说明 |
-| --- | --- |
-| `{affinity}` / `affinity()` | 好感度（系数 × 长期好感）。 |
-| `{relationship}` / `relationship()` | 当前好感度区间对应的关系。 |
-| `{{currentAffinity}}` | 渲染提示词时的好感度。 |
-| `{{historyText}}` | 上下文。 |
-| `{{userMessage}}` / `{{botReply}}` | 当前轮消息与聚合后的 Bot 回复。 |
-| `{{longTermCoefficient}}` | 计算后的系数结果。 |
+### 2) 常用命令
 
-## 指令
+- `affinity.inspect [userId] [platform]`：查看好感度详情
+- `affinity.rank [limit] [platform] [image]`：查看好感度排行
+- `affinity.adjust <userId> <delta> [platform]`：手动调整好感度
+- `affinity.blacklist [limit] [platform] [image]`：查看黑名单
+- `affinity.block <userId> [platform]`：永久拉黑
+- `affinity.unblock <userId> [platform]`：解除永久拉黑
+- `affinity.tempBlock <userId> [durationHours] [platform]`：临时拉黑
+- `affinity.tempUnblock <userId> [platform]`：解除临时拉黑
+- `affinity.clearAll -y`：清空好感度与黑名单数据（危险操作）
 
-| 指令 | 说明 |
-| --- | --- |
-| `affinity.inspect [userId] [platform]` | 查看好感度、长期/短期、系数、连续互动天数、交互统计。 |
-| `affinity.rank [limit] [platform] [image]` | 查看排行榜，支持图片输出（依赖 puppeteer）。 |
-| `affinity.blacklist [limit] [platform] [image]` | 查看黑名单（包含永久和临时）。 |
-| `affinity.block <userId> [platform] [-n note]` | 将用户加入永久黑名单。 |
-| `affinity.unblock <userId> [platform]` | 解除永久黑名单。 |
-| `affinity.tempBlock <userId> [hours] [platform]` | 临时拉黑用户。 |
-| `affinity.tempUnblock <userId> [platform]` | 解除临时黑名单。 |
-| `affinity.adjust <userId> <delta> [platform]` | 手动调整用户好感度。 |
+### 3) 变量（默认名）
 
-## 工具
+- `affinity`：当前用户好感度相关信息
+- `relationshipAffinityLevel`：完整好感区间关系表
+- `blacklistList`：当前群内黑名单信息
+- `userAlias`：指定用户的自定义昵称信息
 
-| 工具 | 功能 |
-| --- | --- |
-| `adjust_affinity` | 将综合好感度设置为指定值，并重新计算关系。 |
-| `adjust_relationship` | 强制切换关系到指定称谓，同时把好感调整到区间下限。 |
-| `adjust_blacklist` | 管理自动黑名单，支持新增或解除。 |
+变量名可通过 `variableSettings` 重命名。
+
+## XML 动作调用
+
+插件可从模型原始输出中解析以下自闭合标签：
+
+- `<affinity delta="" action="" id=""/>`
+- `<blacklist action="" mode="" id="" durationHours="" note=""/>`
+- `<relationship relation="" id=""/>`
+- `<userAlias id="" name=""/>`
+
+对应开关位于 `xmlToolSettings`。
+
+## 原生工具（可选）
+
+可通过 `nativeToolSettings` 控制是否注册：
+
+- `relationship`：关系调整工具
+- `blacklist`：黑名单工具（含临时拉黑）
 
 ## 数据存储
 
-插件会在数据库中维护 `chatluna_affinity_records` 表，常见字段：
+插件通过 Koishi `ctx.database` 持久化，主要表如下：
 
-| 字段 | 说明 |
-| --- | --- |
-| `platform` / `userId` / `selfId` | 用户标识 |
-| `affinity` | 好感度（系数 × 长期好感） |
-| `longTermAffinity` / `shortTermAffinity` | 长期/短期好感度 |
-| `relation` | 当前关系 |
-| `coefficientState` | 系数状态（含 `coefficient` 与 `streak`） |
-| `actionStats` | 模型建议的行为历史 |
-| `chatCount` / `lastInteractionAt` | 聊天次数与最后互动时间 |
+- `chatluna_affinity`
+- `chatluna_blacklist`
+- `chatluna_user_alias`
 
-## 调试与排查
+## 配置概览
 
-- 开启 `debugLogging` 可查看：触发条件、聚合后的 Bot 回复、模型原始输出、delta、综合好感变化、系数计算过程等。
-- `affinity.inspect` 将展示：综合/长期/短期好感、系数、连续互动天数、动态阈值、最近聊天次数，便于调参。
+配置由以下分组组成：
+
+- 好感度：`AffinitySchema`
+- 黑名单：`BlacklistSchema`
+- 关系：`RelationshipSchema`
+- 变量/原生工具/XML 工具/其他：`tools` 分组
+
+完整配置入口：`ConfigSchema`。
+
+## 迁移说明
+
+当前版本已将部分能力拆分为独立插件：
+
+- 日程、天气：`koishi-plugin-chatluna-schedule`
+- 更多变量与 XML 工具：`koishi-plugin-chatluna-toolbox`
+
+## 调试建议
+
+- 开启 `debugLogging` 查看 XML 拦截、状态写入、变量注册等日志。
+- 若遇到旧数据结构问题，可使用 `affinity.clearAll -y` 清理后重建。
 
 ## 许可证
 
