@@ -49,11 +49,17 @@ export interface BotInfoConfig {
   items: MemberInfoItem[];
 }
 
+export type GroupInfoItem =
+  | "groupName"
+  | "groupId"
+  | "memberCount"
+  | "createTime"
+  | "ownerList"
+  | "adminList";
+
 export interface GroupInfoConfig {
   variableName: string;
-  includeMemberCount: boolean;
-  includeCreateTime: boolean;
-  includeOwnersAndAdmins: boolean;
+  items: GroupInfoItem[];
 }
 
 export interface RandomConfig {
