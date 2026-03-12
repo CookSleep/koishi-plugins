@@ -3,9 +3,6 @@ lib/
 coverage/
 *.log
 .DS_Store
-.claude/data
-.claude/koishi-dev
-.claude/meme-generator-main
-.claude/locales
-.claude/worktrees
-.claude/开发文档
+.claude/*
+!.claude/AGENTS.md
+.claude/CLAUDE.md
