@@ -5,4 +5,5 @@ coverage/
 *.log
 .DS_Store
 tsconfig.tsbuildinfo
-.claude/
+.claude/*
+!.claude/AGENTS.md
