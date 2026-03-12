@@ -5,8 +5,6 @@
 
 export interface BaseAffinityConfig {
   initialAffinity: number;
-  maxIncreasePerMessage: number;
-  maxDecreasePerMessage: number;
 }
 
 export interface ShortTermConfig {
@@ -23,7 +21,6 @@ export interface ActionWindowConfig {
   increaseBonus: number;
   decreaseBonus: number;
   bonusChatThreshold: number;
-  allowBonusOverflow: boolean;
   maxEntries: number;
 }
 
@@ -74,8 +71,6 @@ export interface Config {
   affinityDisplayRange: number;
   baseAffinityConfig: BaseAffinityConfig;
   initialAffinity: number;
-  maxIncreasePerMessage: number;
-  maxDecreasePerMessage: number;
   affinityDynamics: AffinityDynamicsConfig;
   blacklistLogInterception: boolean;
   shortTermBlacklistPenalty: number;

@@ -94,7 +94,6 @@ export interface ResolvedActionWindowConfig {
   increaseBonus: number;
   decreaseBonus: number;
   bonusChatThreshold: number;
-  allowBonusOverflow: boolean;
   maxEntries: number;
 }
 

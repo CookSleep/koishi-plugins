@@ -15,12 +15,8 @@ function createConfig(overrides = {}) {
     affinityDisplayRange: 1,
     baseAffinityConfig: {
       initialAffinity: 30,
-      maxIncreasePerMessage: 5,
-      maxDecreasePerMessage: 3,
     },
     initialAffinity: 30,
-    maxIncreasePerMessage: 5,
-    maxDecreasePerMessage: 3,
     affinityDynamics: {},
     blacklistLogInterception: true,
     shortTermBlacklistPenalty: 5,
@@ -86,7 +82,11 @@ function createProcessorHarness(overrides = {}) {
         longTermAffinity: 30,
         shortTermAffinity: 0,
         chatCount: 0,
-        actionStats: { total: 0, counts: { increase: 0, decrease: 0 }, entries: [] },
+        actionStats: {
+          total: 0,
+          counts: { increase: 0, decrease: 0 },
+          entries: [],
+        },
         coefficientState: { coefficient: 1 },
       };
     },

@@ -244,8 +244,6 @@ export function createModelResponseProcessor(
             levelResolver: {
               resolveLevelByAffinity: levelResolver.resolveLevelByAffinity,
             },
-            maxIncrease: config.maxIncreasePerMessage || 5,
-            maxDecrease: config.maxDecreasePerMessage || 3,
             maxActionEntries: actionWindowConfig.maxEntries,
             shortTermConfig,
             log,

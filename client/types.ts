@@ -57,8 +57,6 @@ export interface FrontendConfigSubset {
   xmlToolSettings?: XmlToolSettings;
   baseAffinityConfig?: {
     initialAffinity?: number;
-    maxIncreasePerMessage?: number;
-    maxDecreasePerMessage?: number;
   };
 
   affinityVariableName?: string;

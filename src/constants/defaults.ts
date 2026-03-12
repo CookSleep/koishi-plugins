@@ -8,8 +8,6 @@ export const AFFINITY_DEFAULTS = {
   MAX: 100,
   INITIAL_MIN: 20,
   INITIAL_MAX: 40,
-  MAX_INCREASE_PER_MESSAGE: 5,
-  MAX_DECREASE_PER_MESSAGE: 10,
 } as const;
 
 export const SHORT_TERM_DEFAULTS = {
@@ -23,7 +21,6 @@ export const ACTION_WINDOW_DEFAULTS = {
   INCREASE_BONUS: 2,
   DECREASE_BONUS: 2,
   BONUS_CHAT_THRESHOLD: 0,
-  ALLOW_BONUS_OVERFLOW: false,
   MAX_ENTRIES: 60,
 } as const;
 
@@ -75,6 +72,4 @@ export const FETCH_CONSTANTS = {
 
 export const BASE_AFFINITY_DEFAULTS = {
   initialAffinity: 30,
-  maxIncreasePerMessage: 5,
-  maxDecreasePerMessage: 10,
 } as const;

@@ -18,12 +18,8 @@ function createConfig(overrides = {}) {
     affinityDisplayRange: 1,
     baseAffinityConfig: {
       initialAffinity: 30,
-      maxIncreasePerMessage: 5,
-      maxDecreasePerMessage: 10,
     },
     initialAffinity: 30,
-    maxIncreasePerMessage: 5,
-    maxDecreasePerMessage: 10,
     affinityDynamics: {},
     blacklistLogInterception: true,
     shortTermBlacklistPenalty: 5,
@@ -95,13 +91,9 @@ test("旧随机区间配置迁移为单值时取中位数", () => {
     scopeId: "宁宁",
     baseAffinityConfig: {
       initialAffinity: 30,
-      maxIncreasePerMessage: 5,
-      maxDecreasePerMessage: 10,
     },
     initialRandomMin: 10,
     initialRandomMax: 30,
-    maxIncreasePerMessage: 5,
-    maxDecreasePerMessage: 10,
   };
 
   const base = {
@@ -120,8 +112,6 @@ test("createAffinityStore 默认初始值读取单值配置", () => {
     initialAffinity: 37,
     baseAffinityConfig: {
       initialAffinity: 37,
-      maxIncreasePerMessage: 5,
-      maxDecreasePerMessage: 10,
     },
   });
 
@@ -139,8 +129,6 @@ test("ensureForSeed 无记录时按默认好感初始化到数据库", async () 
     initialAffinity: 35,
     baseAffinityConfig: {
       initialAffinity: 35,
-      maxIncreasePerMessage: 5,
-      maxDecreasePerMessage: 10,
     },
   });
 

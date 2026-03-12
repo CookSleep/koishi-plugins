@@ -39,8 +39,6 @@ export interface ApplyAffinityDeltaParams {
   levelResolver: {
     resolveLevelByAffinity: (affinity: number) => { relation?: string } | null;
   };
-  maxIncrease: number;
-  maxDecrease: number;
   maxActionEntries: number;
   shortTermConfig: {
     promoteThreshold: number;
@@ -72,8 +70,6 @@ export async function applyAffinityDelta(
     action,
     store,
     levelResolver,
-    maxIncrease,
-    maxDecrease,
     maxActionEntries,
     shortTermConfig,
     log,
@@ -93,24 +89,25 @@ export async function applyAffinityDelta(
     const combined = Math.round(longTerm * coefficient);
 
     let actualDelta = Math.abs(delta);
-    if (action === "increase") {
-      actualDelta = Math.min(actualDelta, maxIncrease);
-    } else {
-      actualDelta = Math.min(actualDelta, maxDecrease);
+    if (action === "decrease") {
       actualDelta = -actualDelta;
     }
 
     const rawShortTerm = shortTerm + actualDelta;
+    const crossedPromoteThreshold =
+      rawShortTerm >= shortTermConfig.promoteThreshold;
+    const crossedDemoteThreshold =
+      rawShortTerm <= shortTermConfig.demoteThreshold;
     let newLongTerm = longTerm;
-    let pendingShortTerm = rawShortTerm;
-    if (rawShortTerm >= shortTermConfig.promoteThreshold) {
+    let newShortTerm = rawShortTerm;
+
+    if (crossedPromoteThreshold) {
       newLongTerm = store.clamp(longTerm + shortTermConfig.longTermPromoteStep);
-      pendingShortTerm = rawShortTerm - shortTermConfig.promoteThreshold;
-    } else if (rawShortTerm <= shortTermConfig.demoteThreshold) {
+      newShortTerm = 0;
+    } else if (crossedDemoteThreshold) {
       newLongTerm = store.clamp(longTerm - shortTermConfig.longTermDemoteStep);
-      pendingShortTerm = rawShortTerm - shortTermConfig.demoteThreshold;
+      newShortTerm = 0;
     }
-    const newShortTerm = store.clamp(pendingShortTerm);
     const newActionStats: ActionStats = {
       total: (current?.actionStats?.total || 0) + 1,
       counts: {

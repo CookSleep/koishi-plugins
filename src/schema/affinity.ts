@@ -46,9 +46,6 @@ const AffinityDynamicsSchema = Schema.object({
       .default(10)
       .min(0)
       .description("聊天次数大于该值时才启用额外增减"),
-    allowBonusOverflow: Schema.boolean()
-      .default(false)
-      .description("允许额外增减突破单次上限"),
     maxEntries: Schema.number()
       .default(80)
       .min(10)
@@ -59,7 +56,6 @@ const AffinityDynamicsSchema = Schema.object({
       increaseBonus: 2,
       decreaseBonus: 2,
       bonusChatThreshold: 10,
-      allowBonusOverflow: false,
       maxEntries: 80,
     })
     .description("近期互动加成设置")
@@ -107,12 +103,6 @@ export const AffinitySchema = Schema.object({
     initialAffinity: Schema.number()
       .default(BASE_AFFINITY_DEFAULTS.initialAffinity)
       .description("初始长期好感度默认值"),
-    maxIncreasePerMessage: Schema.number()
-      .default(BASE_AFFINITY_DEFAULTS.maxIncreasePerMessage)
-      .description("单次增加的短期好感最大幅度"),
-    maxDecreasePerMessage: Schema.number()
-      .default(BASE_AFFINITY_DEFAULTS.maxDecreasePerMessage)
-      .description("单次减少的短期好感最大幅度"),
   })
     .default({ ...BASE_AFFINITY_DEFAULTS })
     .description("好感度基础数值")
@@ -129,7 +119,6 @@ export const AffinitySchema = Schema.object({
       increaseBonus: 2,
       decreaseBonus: 2,
       bonusChatThreshold: 10,
-      allowBonusOverflow: false,
       maxEntries: 80,
     },
     coefficient: {
