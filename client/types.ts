@@ -38,7 +38,7 @@ export interface XmlToolSettings {
 
 export interface FrontendConfigSubset {
   scopeId?: string;
-  affinityInitSelfIds?: string[];
+  botSelfIds?: string[];
   affinityEnabled?: boolean;
   affinityDisplayRange?: number;
   rankRenderAsImage?: boolean;

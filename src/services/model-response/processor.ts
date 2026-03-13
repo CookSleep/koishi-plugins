@@ -129,8 +129,8 @@ async function initializeAffinityOnFirstReply(
   const session = context.session;
   if (!session?.userId || !session.selfId) return;
 
-  const allowedSelfIds = Array.isArray(params.config.affinityInitSelfIds)
-    ? params.config.affinityInitSelfIds
+  const allowedSelfIds = Array.isArray(params.config.botSelfIds)
+    ? params.config.botSelfIds
         .map((item) => String(item || "").trim())
         .filter(Boolean)
     : [];
