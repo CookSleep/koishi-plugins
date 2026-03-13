@@ -55,9 +55,6 @@ export interface FrontendConfigSubset {
 
   variableSettings?: VariableSettings;
   xmlToolSettings?: XmlToolSettings;
-  baseAffinityConfig?: {
-    initialAffinity?: number;
-  };
 
   affinityVariableName?: string;
   relationshipLevelVariableName?: string;

@@ -51,83 +51,6 @@ import {
   fetchGroupMemberIds,
   resolveGroupId,
 } from "./helpers/member";
-const BASE_KEYS = Object.keys(BASE_AFFINITY_DEFAULTS);
-
-function normalizeBaseAffinityConfig(config: Config): void {
-  const base = {
-    ...BASE_AFFINITY_DEFAULTS,
-    ...(config.baseAffinityConfig || {}),
-  };
-  const legacyInitialMin = (config as unknown as Record<string, unknown>)
-    .initialRandomMin;
-  const legacyInitialMax = (config as unknown as Record<string, unknown>)
-    .initialRandomMax;
-  const legacyInitialAffinity = (config as unknown as Record<string, unknown>)
-    .initialAffinity;
-
-  const readNumeric = (value: unknown): number | null => {
-    const numeric = Number(value);
-    return Number.isFinite(numeric) ? numeric : null;
-  };
-
-  const explicitInitialAffinity = readNumeric(legacyInitialAffinity);
-  const explicitInitialMin = readNumeric(legacyInitialMin);
-  const explicitInitialMax = readNumeric(legacyInitialMax);
-
-  if (explicitInitialAffinity !== null) {
-    base.initialAffinity = explicitInitialAffinity;
-  } else if (explicitInitialMin !== null && explicitInitialMax !== null) {
-    base.initialAffinity = Math.floor(
-      (explicitInitialMin + explicitInitialMax) / 2,
-    );
-  } else if (explicitInitialMin !== null) {
-    base.initialAffinity = explicitInitialMin;
-  } else if (explicitInitialMax !== null) {
-    base.initialAffinity = explicitInitialMax;
-  }
-
-  for (const key of BASE_KEYS) {
-    const legacy = (config as unknown as Record<string, unknown>)[key];
-    if (legacy !== undefined && legacy !== null) {
-      const numeric = Number(legacy);
-      if (Number.isFinite(numeric)) {
-        (base as Record<string, number>)[key] = numeric;
-      }
-    }
-  }
-
-  config.baseAffinityConfig = base;
-  for (const legacyKey of ["initialRandomMin", "initialRandomMax"]) {
-    if (Object.prototype.hasOwnProperty.call(config, legacyKey)) {
-      delete (config as unknown as Record<string, unknown>)[legacyKey];
-    }
-  }
-  for (const key of BASE_KEYS) {
-    if (Object.prototype.hasOwnProperty.call(config, key)) {
-      delete (config as unknown as Record<string, unknown>)[key];
-    }
-    Object.defineProperty(config, key, {
-      configurable: true,
-      enumerable: true,
-      get() {
-        const target = (
-          config.baseAffinityConfig as unknown as Record<string, number>
-        )?.[key];
-        return Number.isFinite(target)
-          ? target
-          : (BASE_AFFINITY_DEFAULTS as unknown as Record<string, number>)[key];
-      },
-      set(value: number) {
-        if (!config.baseAffinityConfig) {
-          config.baseAffinityConfig = { ...BASE_AFFINITY_DEFAULTS };
-        }
-        (config.baseAffinityConfig as unknown as Record<string, number>)[key] =
-          value;
-      },
-    });
-  }
-}
-
 function normalizeToolSettings(config: Config): void {
   const xmlToolSettings = {
     enableAffinityXmlToolCall:
@@ -171,7 +94,9 @@ export function apply(ctx: Context, config: Config): void {
   const runtimeFingerprint =
     "chatluna-affinity fingerprint: 2026-03-08-runtime-check-a";
   config.scopeId = assertScopeId(config.scopeId);
-  normalizeBaseAffinityConfig(config);
+  config.initialAffinity = Number.isFinite(config.initialAffinity)
+    ? Number(config.initialAffinity)
+    : BASE_AFFINITY_DEFAULTS.initialAffinity;
   normalizeToolSettings(config);
   registerModels(ctx);
 

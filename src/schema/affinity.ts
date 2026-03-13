@@ -99,14 +99,9 @@ export const AffinitySchema = Schema.object({
     .min(1)
     .step(1)
     .description("显示当前上下文中多少位用户的好感度信息"),
-  baseAffinityConfig: Schema.object({
-    initialAffinity: Schema.number()
-      .default(BASE_AFFINITY_DEFAULTS.initialAffinity)
-      .description("初始长期好感度默认值"),
-  })
-    .default({ ...BASE_AFFINITY_DEFAULTS })
-    .description("好感度基础数值")
-    .collapse(),
+  initialAffinity: Schema.number()
+    .default(BASE_AFFINITY_DEFAULTS.initialAffinity)
+    .description("初始长期好感度默认值"),
   affinityDynamics: AffinityDynamicsSchema.default({
     shortTerm: {
       promoteThreshold: 15,

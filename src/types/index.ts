@@ -9,7 +9,6 @@ export * from "./blacklist";
 export * from "./member";
 export * from "./user-alias";
 export {
-  BaseAffinityConfig,
   ShortTermConfig,
   ActionWindowConfig,
   CoefficientConfig,

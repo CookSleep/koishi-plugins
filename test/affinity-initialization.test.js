@@ -16,9 +16,6 @@ function createConfig(overrides = {}) {
     scopeId: "宁宁",
     affinityEnabled: true,
     affinityDisplayRange: 1,
-    baseAffinityConfig: {
-      initialAffinity: 30,
-    },
     initialAffinity: 30,
     affinityDynamics: {},
     blacklistLogInterception: true,
@@ -86,33 +83,9 @@ function createStore(configOverrides = {}) {
   return { store, database };
 }
 
-test("旧随机区间配置迁移为单值时取中位数", () => {
-  const config = {
-    scopeId: "宁宁",
-    baseAffinityConfig: {
-      initialAffinity: 30,
-    },
-    initialRandomMin: 10,
-    initialRandomMax: 30,
-  };
-
-  const base = {
-    initialAffinity: 30,
-    ...(config.baseAffinityConfig || {}),
-  };
-  const low = Number(config.initialRandomMin);
-  const high = Number(config.initialRandomMax);
-  base.initialAffinity = Math.floor((low + high) / 2);
-
-  assert.equal(base.initialAffinity, 20);
-});
-
 test("createAffinityStore 默认初始值读取单值配置", () => {
   const { store } = createStore({
     initialAffinity: 37,
-    baseAffinityConfig: {
-      initialAffinity: 37,
-    },
   });
 
   assert.equal(store.defaultInitial(), 37);
@@ -127,9 +100,6 @@ test("createAffinityStore 默认初始值读取单值配置", () => {
 test("ensureForSeed 无记录时按默认好感初始化到数据库", async () => {
   const { store, database } = createStore({
     initialAffinity: 35,
-    baseAffinityConfig: {
-      initialAffinity: 35,
-    },
   });
 
   const state = await store.ensureForSeed(

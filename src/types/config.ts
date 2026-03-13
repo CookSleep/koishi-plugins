@@ -3,10 +3,6 @@
  * 包含插件配置及各子模块配置类型
  */
 
-export interface BaseAffinityConfig {
-  initialAffinity: number;
-}
-
 export interface ShortTermConfig {
   promoteThreshold: number;
   demoteThreshold: number;
@@ -69,7 +65,6 @@ export interface Config {
   scopeId: string;
   affinityEnabled: boolean;
   affinityDisplayRange: number;
-  baseAffinityConfig: BaseAffinityConfig;
   initialAffinity: number;
   affinityDynamics: AffinityDynamicsConfig;
   blacklistLogInterception: boolean;

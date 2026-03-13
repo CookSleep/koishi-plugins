@@ -13,9 +13,6 @@ function createConfig(overrides = {}) {
     scopeId: "宁宁",
     affinityEnabled: true,
     affinityDisplayRange: 1,
-    baseAffinityConfig: {
-      initialAffinity: 30,
-    },
     initialAffinity: 30,
     affinityDynamics: {},
     blacklistLogInterception: true,

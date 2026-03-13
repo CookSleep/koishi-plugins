@@ -19,6 +19,7 @@ import type {
 } from "../../types";
 import { clamp } from "../../utils";
 import { MODEL_NAME_V2 } from "../../models";
+import { BASE_AFFINITY_DEFAULTS } from "../../constants";
 
 export interface AffinityStoreOptions {
   ctx: Context;
@@ -32,7 +33,7 @@ export function createAffinityStore(options: AffinityStoreOptions) {
   const resolveInitialAffinity = () =>
     Number.isFinite(config.initialAffinity)
       ? config.initialAffinity
-      : (config.baseAffinityConfig?.initialAffinity ?? 30);
+      : BASE_AFFINITY_DEFAULTS.initialAffinity;
 
   const resolveMin = () => {
     const levels = config.relationshipAffinityLevels || [];
