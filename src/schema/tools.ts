@@ -10,11 +10,10 @@ export const ScopeSettingsSchema = Schema.object({
     .pattern(/^[A-Za-z0-9_\-\u4e00-\u9fff]{1,32}$/)
     .required()
     .description("作用域标识，只允许中文、英文、数字、_、-，长度 1-32"),
-  botSelfIds: Schema.array(String)
-    .role("table")
+  botSelfIds: Schema.array(Schema.string())
     .default([])
     .description(
-      "填写该 socpeid 绑定的 bot 的 selfId（QQ号）；为空时表示当前实例任意 bot",
+      "填写该 scopeId 绑定的 bot 的 selfId（QQ号）；为空时表示当前实例任意 bot",
     ),
 }).description("作用域设置");
 

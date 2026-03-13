@@ -88,7 +88,9 @@ const AffinityDynamicsSchema = Schema.object({
     })
     .description("好感度变化系数")
     .collapse(),
-}).description("好感度动态调节");
+}).description(
+  "好感度动态调节：Bot 每次增加或减少的值会先计入短期好感；当短期好感超过阈值时，会按设定步长换算到长期好感；长期好感再乘以当前系数，得到最终的综合好感。",
+);
 
 export const AffinitySchema = Schema.object({
   affinityEnabled: Schema.boolean().default(true).description("启用好感度系统"),
