@@ -6,7 +6,7 @@
 import { Schema } from "koishi";
 
 const DEFAULT_XML_REFERENCE_PROMPT = `## 动作指令
-你可以根据需要创建一个独立的 <actions> 元素。它用于执行非语言的系统指令。如果不需要执行任何动作，请省略此元素。
+你可以根据需要在模型回复中输出一个独立的 <actions> 元素。它用于执行非语言的系统指令。如果不需要执行任何动作，请省略此元素。
 1. 戳一戳: <poke id=""/>
   - id: user_id
   - 适用场景:
@@ -51,5 +51,5 @@ export const XmlToolsSchema = Schema.object({
   referencePrompt: Schema.string()
     .role("textarea")
     .default(DEFAULT_XML_REFERENCE_PROMPT)
-    .description("参考提示词"),
+    .description("模型回复 XML 参考提示词"),
 }).description("XML 工具");

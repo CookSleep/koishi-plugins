@@ -32,6 +32,7 @@ export function apply(ctx: Context, config: Config): void {
   const log = createLogger(ctx, config);
 
   let xmlRuntime: ReturnType<typeof registerXmlTools> | null = null;
+  let characterCtx: Context | null = null;
 
   const initializeServices = async (): Promise<void> => {
     log("info", "toolbox 初始化开始");
@@ -40,14 +41,8 @@ export function apply(ctx: Context, config: Config): void {
 
     const protocol = resolveOneBotProtocol(config, log);
     registerNativeTools({ ctx, config, plugin, protocol, log });
-
-    if (
-      config.enablePokeXmlTool ||
-      config.enableEmojiXmlTool ||
-      config.enableDeleteXmlTool
-    ) {
-      xmlRuntime = registerXmlTools({ ctx, config, protocol, log });
-      xmlRuntime.start();
+    xmlRuntime = registerXmlTools({ ctx, config, protocol, log });
+    if (characterCtx && xmlRuntime.start()) {
       log("info", "XML 工具已启用");
     }
 
@@ -55,9 +50,27 @@ export function apply(ctx: Context, config: Config): void {
   };
 
   const dispose = (): void => {
+    characterCtx = null;
     xmlRuntime?.stop();
     xmlRuntime = null;
   };
+
+  if (
+    config.enablePokeXmlTool ||
+    config.enableEmojiXmlTool ||
+    config.enableDeleteXmlTool
+  ) {
+    ctx.inject(["chatluna_character"], (innerCtx) => {
+      characterCtx = innerCtx;
+      if (!xmlRuntime) return;
+      const started = xmlRuntime.start();
+      if (started) log("info", "XML 工具已启用");
+      innerCtx.on("dispose", () => {
+        if (characterCtx === innerCtx) characterCtx = null;
+        xmlRuntime?.stop();
+      });
+    });
+  }
 
   ctx.on("dispose", dispose);
 

@@ -1,15 +1,11 @@
 /**
  * XML 工具注册
- * 解析 XML 并路由执行原生动作
+ * 组合 temp-runtime 与 XML 处理器
  */
 
-import type { Session } from "koishi";
 import type { Config, LogFn, OneBotProtocol } from "../../types";
-import { sendDeleteMessage } from "../native-tools/tools/delete-msg";
-import { sendPoke } from "../native-tools/tools/poke";
-import { sendMsgEmoji } from "../native-tools/tools/set-msg-emoji";
-import { createXmlInterceptor } from "./interceptor";
-import { parseXmlActions } from "./parser";
+import { createXmlProcessor } from "./processor";
+import { createCharacterTempXmlRuntime } from "./temp-runtime";
 
 export interface RegisterXmlToolsDeps {
   ctx: import("koishi").Context;
@@ -19,74 +15,32 @@ export interface RegisterXmlToolsDeps {
 }
 
 export interface XmlToolsRuntime {
-  start: () => void;
+  start: () => boolean;
   stop: () => void;
+  isActive: () => boolean;
 }
 
 export function registerXmlTools(deps: RegisterXmlToolsDeps): XmlToolsRuntime {
   const { ctx, config, protocol, log } = deps;
-
-  const interceptor = createXmlInterceptor({
-    ctx,
-    config,
+  const processor = createXmlProcessor({ config, protocol, log });
+  const runtime = createCharacterTempXmlRuntime({
+    getCharacterService: () =>
+      (
+        ctx as unknown as {
+          chatluna_character?: {
+            getTemp?: (
+              ...args: unknown[]
+            ) => Promise<{ completionMessages?: unknown[] }>;
+          };
+        }
+      ).chatluna_character,
+    processModelResponse: processor,
     log,
-    onResponse: (response: string, session: Session | null) => {
-      const actions = parseXmlActions(response);
-      let handled = false;
-
-      if (config.enablePokeXmlTool && actions.pokeUserIds.length > 0) {
-        if (!session) {
-          log?.("warn", "检测到戳一戳标记但缺少会话上下文");
-        } else {
-          handled = true;
-          for (const userId of actions.pokeUserIds) {
-            void sendPoke({ session, userId, protocol, log }).catch((error) => {
-              log?.("warn", "XML 触发 poke 失败", error);
-            });
-          }
-        }
-      }
-
-      if (config.enableEmojiXmlTool && actions.emojis.length > 0) {
-        if (!session) {
-          log?.("warn", "检测到表情标记但缺少会话上下文");
-        } else {
-          handled = true;
-          for (const item of actions.emojis) {
-            void sendMsgEmoji({
-              session,
-              messageId: item.messageId,
-              emojiId: item.emojiId,
-              protocol,
-              log,
-            }).catch((error) => {
-              log?.("warn", "XML 触发表情失败", error);
-            });
-          }
-        }
-      }
-
-      if (config.enableDeleteXmlTool && actions.deleteMessageIds.length > 0) {
-        if (!session) {
-          log?.("warn", "检测到撤回标记但缺少会话上下文");
-        } else {
-          handled = true;
-          for (const messageId of actions.deleteMessageIds) {
-            void sendDeleteMessage({ session, messageId, log }).catch(
-              (error) => {
-                log?.("warn", "XML 触发撤回失败", error);
-              },
-            );
-          }
-        }
-      }
-
-      return handled;
-    },
   });
 
   return {
-    start: () => interceptor.start(),
-    stop: () => interceptor.stop(),
+    start: () => runtime.start(),
+    stop: () => runtime.stop(),
+    isActive: () => runtime.isActive(),
   };
 }
