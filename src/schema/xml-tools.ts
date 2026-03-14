@@ -41,15 +41,17 @@ const DEFAULT_XML_REFERENCE_PROMPT = `## 动作指令
 export const XmlToolsSchema = Schema.object({
   enablePokeXmlTool: Schema.boolean()
     .default(false)
-    .description("启用 XML 形式的戳一戳调用"),
+    .description("启用 XML 形式的戳一戳调用（与 原生工具 二选一）"),
   enableEmojiXmlTool: Schema.boolean()
     .default(false)
-    .description("启用 XML 形式的消息表情调用"),
+    .description(
+      "启用 XML 形式的消息表情调用，（需 chatluna-character 开启 enableMessageId，与 原生工具 二选一，emoji_id 对照表：https://bot.q.qq.com/wiki/develop/pythonsdk/model/emoji.html ）",
+    ),
   enableDeleteXmlTool: Schema.boolean()
     .default(false)
-    .description("启用 XML 形式的消息撤回调用"),
+    .description("启用 XML 形式的消息撤回调用（需 chatluna-character 开启 enableMessageId，与 原生工具 二选一）"),
   referencePrompt: Schema.string()
     .role("textarea")
     .default(DEFAULT_XML_REFERENCE_PROMPT)
-    .description("模型回复 XML 参考提示词"),
+    .description("模型回复 XML 参考提示词，自行写入提示词中，不会自动注入"),
 }).description("XML 工具");
