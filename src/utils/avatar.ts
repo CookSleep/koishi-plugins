@@ -19,6 +19,7 @@ interface ElementLike {
 }
 
 const SPECIAL_MENTION_IDS = new Set(["all", "here"]);
+const DISPLAY_NAME_MAX_LENGTH = 64;
 
 export function getSenderAvatarSrc(session: Session): string | undefined {
   const avatar = session.author?.avatar;
@@ -118,8 +119,6 @@ function pickMentionedTargetUser(
 ): { userId: string; displayName?: string } | undefined {
   return pickMentionedTargetUsers(session)[0];
 }
-
-const DISPLAY_NAME_MAX_LENGTH = 64;
 
 function normalizeDisplayName(value: unknown): string | undefined {
   if (typeof value !== "string") return undefined;
@@ -301,6 +300,60 @@ export async function resolveDisplayNameByUserId(
   return undefined;
 }
 
+async function resolveMentionedAvatarImage(
+  ctx: Context,
+  session: Session,
+  timeoutMs: number,
+  userId: string,
+  filenamePrefix: string,
+  warningLabel: string,
+): Promise<GenerateImageInput | undefined> {
+  let src: string | undefined;
+  try {
+    src = await resolveAvatarSrcByUserId(session, userId);
+  } catch (error) {
+    ctx
+      .logger("chatluna-meme-generator")
+      .warn("%s获取失败：%s", warningLabel, String(error));
+    return undefined;
+  }
+
+  if (!src) return undefined;
+
+  try {
+    return await downloadImage(ctx, src, timeoutMs, filenamePrefix);
+  } catch (error) {
+    ctx
+      .logger("chatluna-meme-generator")
+      .warn("%s下载失败：%s", warningLabel, String(error));
+    return undefined;
+  }
+}
+
+export async function getMentionedAvatarImages(
+  ctx: Context,
+  session: Session,
+  timeoutMs: number,
+): Promise<GenerateImageInput[]> {
+  const targetUsers = pickMentionedTargetUsers(session);
+  const images: GenerateImageInput[] = [];
+
+  for (let index = 0; index < targetUsers.length; index += 1) {
+    const targetUser = targetUsers[index];
+    const image = await resolveMentionedAvatarImage(
+      ctx,
+      session,
+      timeoutMs,
+      targetUser.userId,
+      `mentioned-avatar-${index + 1}`,
+      `第${index + 1}个被@用户头像`,
+    );
+    if (image) images.push(image);
+  }
+
+  return images;
+}
+
 export async function getMentionedTargetAvatarImage(
   ctx: Context,
   session: Session,
@@ -309,26 +362,14 @@ export async function getMentionedTargetAvatarImage(
   const targetUser = pickMentionedTargetUser(session);
   if (!targetUser) return undefined;
 
-  let src: string | undefined;
-  try {
-    src = await resolveAvatarSrcByUserId(session, targetUser.userId);
-  } catch (error) {
-    ctx
-      .logger("chatluna-meme-generator")
-      .warn("被@用户头像获取失败：%s", String(error));
-    return undefined;
-  }
-
-  if (!src) return undefined;
-
-  try {
-    return await downloadImage(ctx, src, timeoutMs, "mentioned-avatar");
-  } catch (error) {
-    ctx
-      .logger("chatluna-meme-generator")
-      .warn("被@用户头像下载失败：%s", String(error));
-    return undefined;
-  }
+  return await resolveMentionedAvatarImage(
+    ctx,
+    session,
+    timeoutMs,
+    targetUser.userId,
+    "mentioned-avatar",
+    "被@用户头像",
+  );
 }
 
 export async function getMentionedSecondaryAvatarImage(
@@ -339,31 +380,14 @@ export async function getMentionedSecondaryAvatarImage(
   const targetUsers = pickMentionedTargetUsers(session);
   if (targetUsers.length < 2) return undefined;
 
-  let src: string | undefined;
-  try {
-    src = await resolveAvatarSrcByUserId(session, targetUsers[1].userId);
-  } catch (error) {
-    ctx
-      .logger("chatluna-meme-generator")
-      .warn("第二被@用户头像获取失败：%s", String(error));
-    return undefined;
-  }
-
-  if (!src) return undefined;
-
-  try {
-    return await downloadImage(
-      ctx,
-      src,
-      timeoutMs,
-      "mentioned-secondary-avatar",
-    );
-  } catch (error) {
-    ctx
-      .logger("chatluna-meme-generator")
-      .warn("第二被@用户头像下载失败：%s", String(error));
-    return undefined;
-  }
+  return await resolveMentionedAvatarImage(
+    ctx,
+    session,
+    timeoutMs,
+    targetUsers[1].userId,
+    "mentioned-secondary-avatar",
+    "第二被@用户头像",
+  );
 }
 
 export async function getMentionedTargetDisplayName(

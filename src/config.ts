@@ -186,12 +186,12 @@ const randomSchema = Schema.object({
         .max(1000)
         .step(1)
         .default(100)
-        .description("权重（仅在当前桶有可选模板时生效）"),
+        .description("权重"),
     }),
   )
     .role("table")
     .default(defaultConfig.randomMemeBucketWeightRules)
-    .description("meme.random 按模板类别桶随机时的权重配置"),
+    .description("meme.random 随机时的权重配置"),
 }).description("随机触发设置");
 
 const triggerSchema = Schema.object({

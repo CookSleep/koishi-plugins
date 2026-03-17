@@ -541,6 +541,163 @@ describe("applyAutoFillPolicy", () => {
     expect(result.selectedTextSource).toBe("template-default");
   });
 
+  it("min_images=1 且 max_images=2 且无图时若存在两个被@头像应优先补两张被@头像", () => {
+    const targetAvatar = makeImage("target-avatar");
+    const secondaryTargetAvatar = makeImage("secondary-target-avatar");
+    const senderAvatar = makeImage("sender-avatar");
+
+    const result = applyAutoFillPolicy({
+      texts: ["a"],
+      images: [],
+      params: makeParams({ min_images: 1, max_images: 2 }),
+      config: {
+        ...baseConfig,
+        autoUseAvatarWhenMinImagesOneAndNoImage: true,
+      },
+      senderAvatarImage: senderAvatar,
+      mentionedAvatarImages: [targetAvatar, secondaryTargetAvatar],
+    });
+
+    expect(result.images).toHaveLength(2);
+    expect(result.images[0]).toBe(targetAvatar);
+    expect(result.images[1]).toBe(secondaryTargetAvatar);
+  });
+
+  it("min_images=1 且 max_images=3 且无图时若存在三个被@头像应按顺序补满三张", () => {
+    const senderAvatar = makeImage("sender-avatar");
+    const targetAvatar = makeImage("target-avatar");
+    const secondaryTargetAvatar = makeImage("secondary-target-avatar");
+    const thirdTargetAvatar = makeImage("third-target-avatar");
+
+    const result = applyAutoFillPolicy({
+      texts: ["a"],
+      images: [],
+      params: makeParams({ min_images: 1, max_images: 3 }),
+      config: {
+        ...baseConfig,
+        autoUseAvatarWhenMinImagesOneAndNoImage: true,
+      },
+      senderAvatarImage: senderAvatar,
+      mentionedAvatarImages: [
+        targetAvatar,
+        secondaryTargetAvatar,
+        thirdTargetAvatar,
+      ],
+    });
+
+    expect(result.images).toHaveLength(3);
+    expect(result.images).toEqual([
+      targetAvatar,
+      secondaryTargetAvatar,
+      thirdTargetAvatar,
+    ]);
+  });
+
+  it("min_images=1 且 max_images>2 且无图时若存在两个被@头像应优先补两张被@头像", () => {
+    const targetAvatar = makeImage("target-avatar");
+    const secondaryTargetAvatar = makeImage("secondary-target-avatar");
+    const senderAvatar = makeImage("sender-avatar");
+
+    const result = applyAutoFillPolicy({
+      texts: ["a"],
+      images: [],
+      params: makeParams({ min_images: 1, max_images: 9 }),
+      config: {
+        ...baseConfig,
+        autoUseAvatarWhenMinImagesOneAndNoImage: true,
+      },
+      senderAvatarImage: senderAvatar,
+      mentionedAvatarImages: [targetAvatar, secondaryTargetAvatar],
+    });
+
+    expect(result.images).toHaveLength(2);
+    expect(result.images[0]).toBe(targetAvatar);
+    expect(result.images[1]).toBe(secondaryTargetAvatar);
+  });
+
+  it("min_images=2 且 max_images=3 且无图时若存在三个被@头像应按顺序补满三张", () => {
+    const senderAvatar = makeImage("sender-avatar");
+    const botAvatar = makeImage("bot-avatar");
+    const targetAvatar = makeImage("target-avatar");
+    const secondaryTargetAvatar = makeImage("secondary-target-avatar");
+    const thirdTargetAvatar = makeImage("third-target-avatar");
+
+    const result = applyAutoFillPolicy({
+      texts: ["a"],
+      images: [],
+      params: makeParams({ min_images: 2, max_images: 3 }),
+      config: {
+        ...baseConfig,
+        autoUseAvatarWhenMinImagesOneAndNoImage: true,
+        autoFillSenderAndBotAvatarsWhenMinImagesTwoAndNoImage: true,
+      },
+      senderAvatarImage: senderAvatar,
+      mentionedAvatarImages: [
+        targetAvatar,
+        secondaryTargetAvatar,
+        thirdTargetAvatar,
+      ],
+      botAvatarImage: botAvatar,
+    });
+
+    expect(result.images).toHaveLength(3);
+    expect(result.images).toEqual([
+      targetAvatar,
+      secondaryTargetAvatar,
+      thirdTargetAvatar,
+    ]);
+  });
+
+  it("min_images=2 且 max_images=2 且无图时若存在三个被@头像仅使用前两张", () => {
+    const senderAvatar = makeImage("sender-avatar");
+    const botAvatar = makeImage("bot-avatar");
+    const targetAvatar = makeImage("target-avatar");
+    const secondaryTargetAvatar = makeImage("secondary-target-avatar");
+    const thirdTargetAvatar = makeImage("third-target-avatar");
+
+    const result = applyAutoFillPolicy({
+      texts: ["a"],
+      images: [],
+      params: makeParams({ min_images: 2, max_images: 2 }),
+      config: {
+        ...baseConfig,
+        autoUseAvatarWhenMinImagesOneAndNoImage: true,
+        autoFillSenderAndBotAvatarsWhenMinImagesTwoAndNoImage: true,
+      },
+      senderAvatarImage: senderAvatar,
+      mentionedAvatarImages: [
+        targetAvatar,
+        secondaryTargetAvatar,
+        thirdTargetAvatar,
+      ],
+      botAvatarImage: botAvatar,
+    });
+
+    expect(result.images).toHaveLength(2);
+    expect(result.images).toEqual([targetAvatar, secondaryTargetAvatar]);
+  });
+
+  it("min_images=2 且仅有一个被@头像时仍回退补被@与 bot 头像", () => {
+    const targetAvatar = makeImage("target-avatar");
+    const botAvatar = makeImage("bot-avatar");
+
+    const result = applyAutoFillPolicy({
+      texts: ["a"],
+      images: [],
+      params: makeParams({ min_images: 2 }),
+      config: {
+        ...baseConfig,
+        autoFillSenderAndBotAvatarsWhenMinImagesTwoAndNoImage: true,
+      },
+      mentionedAvatarImages: [targetAvatar],
+      botAvatarImage: botAvatar,
+    });
+
+    expect(result.images).toHaveLength(2);
+    expect(result.images[0]).toBe(targetAvatar);
+    expect(result.images[1]).toBe(botAvatar);
+  });
+
   it("min_images=1 且无图且存在被@头像时优先使用被@头像", () => {
     const senderAvatar = makeImage("sender-avatar");
     const targetAvatar = makeImage("target-avatar");
@@ -554,7 +711,7 @@ describe("applyAutoFillPolicy", () => {
         autoUseAvatarWhenMinImagesOneAndNoImage: true,
       },
       senderAvatarImage: senderAvatar,
-      targetAvatarImage: targetAvatar,
+      mentionedAvatarImages: [targetAvatar],
     });
 
     expect(result.images).toHaveLength(1);
@@ -614,8 +771,7 @@ describe("applyAutoFillPolicy", () => {
         autoFillSenderAndBotAvatarsWhenMinImagesTwoAndNoImage: true,
       },
       senderAvatarImage: senderAvatar,
-      targetAvatarImage: targetAvatar,
-      secondaryTargetAvatarImage: secondaryTargetAvatar,
+      mentionedAvatarImages: [targetAvatar, secondaryTargetAvatar],
       botAvatarImage: botAvatar,
     });
 
@@ -642,7 +798,7 @@ describe("applyAutoFillPolicy", () => {
         autoFillSenderAndBotAvatarsWhenMinImagesTwoAndNoImage: true,
       },
       senderAvatarImage: senderAvatar,
-      targetAvatarImage: targetAvatar,
+      mentionedAvatarImages: [targetAvatar],
       botAvatarImage: botAvatar,
     });
 
@@ -684,7 +840,7 @@ describe("applyAutoFillPolicy", () => {
         ...baseConfig,
         autoFillSenderAndBotAvatarsWhenMinImagesTwoAndNoImage: true,
       },
-      targetAvatarImage: targetAvatar,
+      mentionedAvatarImages: [targetAvatar],
       botAvatarImage: botAvatar,
     });
 

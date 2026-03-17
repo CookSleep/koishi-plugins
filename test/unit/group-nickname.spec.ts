@@ -52,6 +52,7 @@ vi.mock("../../src/command/parse", () => ({
 
 const avatarMocks = vi.hoisted(() => ({
   getSenderAvatarImage: vi.fn(async () => undefined),
+  getMentionedAvatarImages: vi.fn(async () => []),
   getMentionedTargetAvatarImage: vi.fn(async () => undefined),
   getMentionedSecondaryAvatarImage: vi.fn(async () => undefined),
   getBotAvatarImage: vi.fn(async () => undefined),
@@ -59,6 +60,7 @@ const avatarMocks = vi.hoisted(() => ({
 
 vi.mock("../../src/utils/avatar", () => ({
   getSenderAvatarImage: avatarMocks.getSenderAvatarImage,
+  getMentionedAvatarImages: avatarMocks.getMentionedAvatarImages,
   getMentionedTargetAvatarImage: avatarMocks.getMentionedTargetAvatarImage,
   getMentionedSecondaryAvatarImage:
     avatarMocks.getMentionedSecondaryAvatarImage,
@@ -161,10 +163,12 @@ function createSession() {
 
 function resetAvatarMocks() {
   avatarMocks.getSenderAvatarImage.mockReset();
+  avatarMocks.getMentionedAvatarImages.mockReset();
   avatarMocks.getMentionedTargetAvatarImage.mockReset();
   avatarMocks.getMentionedSecondaryAvatarImage.mockReset();
   avatarMocks.getBotAvatarImage.mockReset();
   avatarMocks.getSenderAvatarImage.mockResolvedValue(undefined);
+  avatarMocks.getMentionedAvatarImages.mockResolvedValue([]);
   avatarMocks.getMentionedTargetAvatarImage.mockResolvedValue(undefined);
   avatarMocks.getMentionedSecondaryAvatarImage.mockResolvedValue(undefined);
   avatarMocks.getBotAvatarImage.mockResolvedValue(undefined);

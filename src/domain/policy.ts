@@ -12,8 +12,7 @@ export interface AutoFillInput {
   params: MemeParamsType;
   config: Config;
   senderAvatarImage?: GenerateImageInput;
-  targetAvatarImage?: GenerateImageInput;
-  secondaryTargetAvatarImage?: GenerateImageInput;
+  mentionedAvatarImages?: GenerateImageInput[];
   botAvatarImage?: GenerateImageInput;
   senderName?: string;
   groupNicknameText?: string;
@@ -164,6 +163,28 @@ function resolveEmptyTexts(
   return { texts: [] };
 }
 
+function getMentionedAvatarCandidates(
+  input: AutoFillInput,
+  limit: number,
+): GenerateImageInput[] {
+  const mentionedAvatarImages = (input.mentionedAvatarImages ?? []).slice(
+    0,
+    limit,
+  );
+  if (mentionedAvatarImages.length === 0) return [];
+
+  if (
+    mentionedAvatarImages.length === 1 &&
+    input.senderAvatarImage &&
+    input.botAvatarImage &&
+    isSameImage(input.senderAvatarImage, mentionedAvatarImages[0])
+  ) {
+    return [input.senderAvatarImage, input.botAvatarImage].slice(0, limit);
+  }
+
+  return mentionedAvatarImages;
+}
+
 export function applyAutoFillPolicy(input: AutoFillInput): AutoFillResult {
   const texts = input.texts.filter(Boolean);
   const images = [...input.images];
@@ -200,6 +221,7 @@ export function applyAutoFillPolicy(input: AutoFillInput): AutoFillResult {
   }
 
   const minImages = input.params.min_images;
+  const maxImages = input.params.max_images;
   const userImageCount = images.length;
 
   if (
@@ -207,40 +229,14 @@ export function applyAutoFillPolicy(input: AutoFillInput): AutoFillResult {
     minImages === 1 &&
     userImageCount === 0
   ) {
-    const singleImageAvatar =
-      input.targetAvatarImage || input.senderAvatarImage;
-    if (singleImageAvatar) {
-      images.push(singleImageAvatar);
-      return { texts, images, selectedTextSource };
-    }
-  }
-
-  if (
-    input.config.autoFillSenderAndBotAvatarsWhenMinImagesTwoAndNoImage &&
-    minImages === 2 &&
-    userImageCount === 0 &&
-    input.targetAvatarImage
-  ) {
-    if (input.secondaryTargetAvatarImage) {
-      images.push(input.targetAvatarImage, input.secondaryTargetAvatarImage);
+    const mentionedCandidates = getMentionedAvatarCandidates(input, maxImages);
+    if (mentionedCandidates.length > 0) {
+      images.push(...mentionedCandidates);
       return { texts, images, selectedTextSource };
     }
 
     if (input.senderAvatarImage) {
-      if (
-        input.botAvatarImage &&
-        isSameImage(input.senderAvatarImage, input.targetAvatarImage)
-      ) {
-        images.push(input.senderAvatarImage, input.botAvatarImage);
-        return { texts, images, selectedTextSource };
-      }
-
-      images.push(input.senderAvatarImage, input.targetAvatarImage);
-      return { texts, images, selectedTextSource };
-    }
-
-    if (input.botAvatarImage) {
-      images.push(input.targetAvatarImage, input.botAvatarImage);
+      images.push(input.senderAvatarImage);
       return { texts, images, selectedTextSource };
     }
   }
@@ -248,12 +244,28 @@ export function applyAutoFillPolicy(input: AutoFillInput): AutoFillResult {
   if (
     input.config.autoFillSenderAndBotAvatarsWhenMinImagesTwoAndNoImage &&
     minImages === 2 &&
-    userImageCount === 0 &&
-    input.senderAvatarImage &&
-    input.botAvatarImage
+    userImageCount === 0
   ) {
-    images.push(input.senderAvatarImage, input.botAvatarImage);
-    return { texts, images, selectedTextSource };
+    const mentionedCandidates = getMentionedAvatarCandidates(input, maxImages);
+    if (mentionedCandidates.length >= 2) {
+      images.push(...mentionedCandidates);
+      return { texts, images, selectedTextSource };
+    }
+
+    if (mentionedCandidates.length === 1 && input.senderAvatarImage) {
+      images.push(input.senderAvatarImage, mentionedCandidates[0]);
+      return { texts, images, selectedTextSource };
+    }
+
+    if (mentionedCandidates.length === 1 && input.botAvatarImage) {
+      images.push(mentionedCandidates[0], input.botAvatarImage);
+      return { texts, images, selectedTextSource };
+    }
+
+    if (input.senderAvatarImage && input.botAvatarImage) {
+      images.push(input.senderAvatarImage, input.botAvatarImage);
+      return { texts, images, selectedTextSource };
+    }
   }
 
   const missing = minImages - userImageCount;

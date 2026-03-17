@@ -28,8 +28,7 @@ interface XmlGenerateInput {
   texts: string[];
   images: PreparedImages;
   senderAvatarImage?: Awaited<ReturnType<typeof getSenderAvatarImage>>;
-  targetAvatarImage?: Awaited<ReturnType<typeof getSenderAvatarImage>>;
-  secondaryTargetAvatarImage?: Awaited<ReturnType<typeof getSenderAvatarImage>>;
+  mentionedAvatarImages: PreparedImages;
   senderName?: string;
   groupNicknameText?: string;
 }
@@ -51,10 +50,7 @@ interface InstallXmlRuntimeOptions {
     texts: string[],
     images: PreparedImages,
     senderAvatarImage?: Awaited<ReturnType<typeof getSenderAvatarImage>>,
-    targetAvatarImage?: Awaited<ReturnType<typeof getSenderAvatarImage>>,
-    secondaryTargetAvatarImage?: Awaited<
-      ReturnType<typeof getSenderAvatarImage>
-    >,
+    mentionedAvatarImages?: PreparedImages,
     botAvatarImage?: Awaited<ReturnType<typeof getSenderAvatarImage>>,
     senderName?: string,
     groupNicknameText?: string,
@@ -189,7 +185,7 @@ export function installXmlRuntime(options: InstallXmlRuntimeOptions): void {
       downloadedImages.push(image);
     }
 
-    const atAvatarImages: PreparedImages = [];
+    const mentionedAvatarImages: PreparedImages = [];
     for (let index = 0; index < pickedCall.atUserIds.length; index += 1) {
       const userId = pickedCall.atUserIds[index];
       const avatar = await resolveAvatarImageByUserId(
@@ -201,7 +197,7 @@ export function installXmlRuntime(options: InstallXmlRuntimeOptions): void {
         `xml-at-avatar-${index + 1}`,
       );
       if (!avatar) continue;
-      atAvatarImages.push(avatar);
+      mentionedAvatarImages.push(avatar);
     }
 
     let targetDisplayName: string | undefined;
@@ -226,8 +222,7 @@ export function installXmlRuntime(options: InstallXmlRuntimeOptions): void {
       texts: pickedCall.texts,
       images: downloadedImages,
       senderAvatarImage,
-      targetAvatarImage: atAvatarImages[0],
-      secondaryTargetAvatarImage: atAvatarImages[1],
+      mentionedAvatarImages,
       senderName,
       groupNicknameText: config.autoUseGroupNicknameWhenNoDefaultText
         ? targetDisplayName || senderName
@@ -271,8 +266,7 @@ export function installXmlRuntime(options: InstallXmlRuntimeOptions): void {
           xmlInput.texts,
           xmlInput.images,
           xmlInput.senderAvatarImage,
-          xmlInput.targetAvatarImage,
-          xmlInput.secondaryTargetAvatarImage,
+          xmlInput.mentionedAvatarImages,
           botAvatarImage,
           xmlInput.senderName,
           xmlInput.groupNicknameText,
@@ -399,30 +393,35 @@ export function installXmlRuntime(options: InstallXmlRuntimeOptions): void {
           trackedDispatchers.add(messages);
           attachMessageDispatcher(
             messages,
-            args[0] && typeof args[0] === "object"
-              ? (args[0] as Session)
-              : null,
+            (args[0] as Session | undefined) ?? null,
           );
         }
         return temp;
       };
 
-      serviceRecord[GET_TEMP_PATCH_TAG] = true;
+      Object.defineProperty(serviceRecord, GET_TEMP_PATCH_TAG, {
+        value: true,
+        configurable: true,
+        enumerable: false,
+        writable: true,
+      });
+    } else {
+      const existingTrackedDispatchers = serviceRecord[GET_TEMP_DISPATCHERS] as
+        | Set<ChatlunaCompletionMessagesLike>
+        | undefined;
+      existingTrackedDispatchers?.forEach((messages) => {
+        trackedDispatchers.add(messages);
+      });
     }
 
     return () => {
-      const originalGetTemp = serviceRecord[
-        GET_TEMP_ORIGINAL
-      ] as ChatlunaCharacterServiceLike["getTemp"];
-      const dispatchers = serviceRecord[GET_TEMP_DISPATCHERS] as
-        | Set<ChatlunaCompletionMessagesLike>
+      trackedDispatchers.forEach((messages) =>
+        restoreMessageDispatcher(messages),
+      );
+      const originalGetTemp = serviceRecord[GET_TEMP_ORIGINAL] as
+        | ChatlunaCharacterServiceLike["getTemp"]
         | undefined;
-
-      for (const messages of Array.from(dispatchers ?? [])) {
-        restoreMessageDispatcher(messages);
-      }
-
-      if (typeof originalGetTemp === "function") {
+      if (originalGetTemp && service.getTemp !== originalGetTemp) {
         service.getTemp = originalGetTemp;
       }
       delete serviceRecord[GET_TEMP_PATCH_TAG];
@@ -431,56 +430,48 @@ export function installXmlRuntime(options: InstallXmlRuntimeOptions): void {
     };
   };
 
-  let restoreCharacterService: (() => void) | null = null;
-  let activeCharacterService: ChatlunaCharacterServiceLike | null = null;
-  let characterCtx: ContextWithChatlunaCharacter | null = null;
+  let unbindCharacterService: (() => void) | null = null;
 
-  const activateXmlRuntime = (
-    runtimeCtx: ContextWithChatlunaCharacter = characterCtx ??
-      (ctx as ContextWithChatlunaCharacter),
+  const attachCharacterService = (
+    service: ChatlunaCharacterServiceLike | null | undefined,
   ): void => {
-    const characterService = runtimeCtx.chatluna_character;
-    if (!characterService || typeof characterService.getTemp !== "function") {
-      logger.warn("chatluna_character.getTemp 挂载失败，XML 工具不会启用");
+    if (!service) {
+      if (unbindCharacterService) {
+        unbindCharacterService();
+        unbindCharacterService = null;
+      }
       return;
     }
 
-    if (
-      restoreCharacterService &&
-      activeCharacterService === characterService
-    ) {
-      return;
+    if (unbindCharacterService) {
+      unbindCharacterService();
+      unbindCharacterService = null;
     }
 
-    restoreCharacterService?.();
-    restoreCharacterService = bindCharacterService(characterService);
-    activeCharacterService = restoreCharacterService ? characterService : null;
-
-    if (restoreCharacterService) {
-      logger.info("已启用基于 temp 的 XML 工具调用模式");
-      return;
+    unbindCharacterService = bindCharacterService(service);
+    if (!unbindCharacterService) {
+      logger.warn("chatluna_character.getTemp 不可用，XML 工具不会启用");
     }
-
-    logger.warn("chatluna_character.getTemp 挂载失败，XML 工具不会启用");
   };
 
-  ctx.inject(["chatluna_character"], (innerCtx) => {
-    characterCtx = innerCtx as ContextWithChatlunaCharacter;
-    activateXmlRuntime(characterCtx);
-    innerCtx.on("dispose", () => {
-      if (characterCtx === innerCtx) {
-        characterCtx = null;
-      }
-      restoreCharacterService?.();
-      restoreCharacterService = null;
-      activeCharacterService = null;
-    });
+  const bindFromContext = (currentCtx: Context): void => {
+    attachCharacterService(
+      (currentCtx as ContextWithChatlunaCharacter).chatluna_character,
+    );
+  };
+
+  ctx.on("ready", () => {
+    bindFromContext(ctx);
+  });
+
+  ctx.inject(["chatluna_character"], (injectedCtx) => {
+    bindFromContext(injectedCtx);
   });
 
   ctx.on("dispose", () => {
-    characterCtx = null;
-    restoreCharacterService?.();
-    restoreCharacterService = null;
-    activeCharacterService = null;
+    if (unbindCharacterService) {
+      unbindCharacterService();
+      unbindCharacterService = null;
+    }
   });
 }

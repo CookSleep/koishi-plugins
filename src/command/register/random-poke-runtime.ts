@@ -18,8 +18,7 @@ import {
 } from "../random";
 import {
   getBotAvatarImage,
-  getMentionedSecondaryAvatarImage,
-  getMentionedTargetAvatarImage,
+  getMentionedAvatarImages,
   getMentionedTargetDisplayName,
   getSenderAvatarImage,
   getSenderDisplayName,
@@ -44,8 +43,7 @@ interface InstallRandomRuntimeOptions {
     texts: string[],
     images: Awaited<ReturnType<typeof parseCommandInput>>["images"],
     senderAvatarImage?: PreparedAvatarImage,
-    targetAvatarImage?: PreparedAvatarImage,
-    secondaryTargetAvatarImage?: PreparedAvatarImage,
+    mentionedAvatarImages?: PreparedAvatarImage[],
     botAvatarImage?: PreparedAvatarImage,
     senderName?: string,
     groupNicknameText?: string,
@@ -209,19 +207,13 @@ async function resolvePokeAvatarHints(
   pokeRuntimeHints?: Awaited<ReturnType<typeof resolvePokeRuntimeHints>>,
 ): Promise<{
   senderAvatarImage?: PreparedAvatarImage;
-  targetAvatarImage?: PreparedAvatarImage;
-  secondaryTargetAvatarImage?: PreparedAvatarImage;
+  mentionedAvatarImages: PreparedAvatarImage[];
   botAvatarImage?: PreparedAvatarImage;
 }> {
   const resolvedPokeRuntimeHints =
     pokeRuntimeHints ?? (await resolvePokeRuntimeHints(session));
   const senderAvatarImage = await getSenderAvatarImage(ctx, session, timeoutMs);
-  const targetAvatarImage = await getMentionedTargetAvatarImage(
-    ctx,
-    session,
-    timeoutMs,
-  );
-  const secondaryTargetAvatarImage = await getMentionedSecondaryAvatarImage(
+  const mentionedAvatarImages = await getMentionedAvatarImages(
     ctx,
     session,
     timeoutMs,
@@ -231,8 +223,7 @@ async function resolvePokeAvatarHints(
   if (!isPokeTriggerSession(session)) {
     return {
       senderAvatarImage,
-      targetAvatarImage,
-      secondaryTargetAvatarImage,
+      mentionedAvatarImages,
       botAvatarImage,
     };
   }
@@ -253,8 +244,12 @@ async function resolvePokeAvatarHints(
 
   return {
     senderAvatarImage: senderAvatarImage || actorAvatarImage,
-    targetAvatarImage: targetAvatarImage || actorAvatarImage,
-    secondaryTargetAvatarImage,
+    mentionedAvatarImages:
+      mentionedAvatarImages.length > 0
+        ? mentionedAvatarImages
+        : actorAvatarImage
+          ? [actorAvatarImage]
+          : [],
     botAvatarImage,
   };
 }
@@ -332,17 +327,13 @@ export function installRandomRuntime(
             senderName
           : undefined;
 
-        const {
-          senderAvatarImage,
-          targetAvatarImage,
-          secondaryTargetAvatarImage,
-          botAvatarImage,
-        } = await resolvePokeAvatarHints(
-          ctx,
-          session,
-          config.timeoutMs,
-          pokeRuntimeHints,
-        );
+        const { senderAvatarImage, mentionedAvatarImages, botAvatarImage } =
+          await resolvePokeAvatarHints(
+            ctx,
+            session,
+            config.timeoutMs,
+            pokeRuntimeHints,
+          );
         const randomConfig = buildRandomConfig(config);
         const randomDedupeConfig = {
           enabled: config.enableRandomDedupeWithinHours,
@@ -365,8 +356,7 @@ export function installRandomRuntime(
               params: info.params_type,
               config: randomConfig,
               senderAvatarImage,
-              targetAvatarImage,
-              secondaryTargetAvatarImage,
+              mentionedAvatarImages,
               botAvatarImage,
               senderName,
               groupNicknameText,
@@ -444,8 +434,7 @@ export function installRandomRuntime(
             parsedInput.texts,
             parsedInput.images,
             senderAvatarImage,
-            targetAvatarImage,
-            secondaryTargetAvatarImage,
+            mentionedAvatarImages,
             botAvatarImage,
             senderName,
             groupNicknameText,

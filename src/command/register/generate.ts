@@ -10,16 +10,19 @@ import { MemeBackendClient } from "../../infra/client";
 import { parseCommandInput } from "../parse";
 import {
   getBotAvatarImage,
-  getMentionedSecondaryAvatarImage,
-  getMentionedTargetAvatarImage,
+  getMentionedAvatarImages,
   getMentionedTargetDisplayName,
   getSenderAvatarImage,
   getSenderDisplayName,
 } from "../../utils/avatar";
 import { mapRuntimeErrorMessage } from "./errors";
 
-export type PreparedImages = Awaited<ReturnType<typeof parseCommandInput>>["images"];
-export type PreparedAvatarImage = Awaited<ReturnType<typeof getSenderAvatarImage>>;
+export type PreparedImages = Awaited<
+  ReturnType<typeof parseCommandInput>
+>["images"];
+export type PreparedAvatarImage = NonNullable<
+  Awaited<ReturnType<typeof getSenderAvatarImage>>
+>;
 
 export function buildRandomConfig(config: Config): Config {
   return {
@@ -54,12 +57,7 @@ export async function handleGenerate(
       session,
       config.timeoutMs,
     );
-    const targetAvatarImage = await getMentionedTargetAvatarImage(
-      ctx,
-      session,
-      config.timeoutMs,
-    );
-    const secondaryTargetAvatarImage = await getMentionedSecondaryAvatarImage(
+    const mentionedAvatarImages = await getMentionedAvatarImages(
       ctx,
       session,
       config.timeoutMs,
@@ -76,8 +74,7 @@ export async function handleGenerate(
       parsedInput.texts,
       parsedInput.images,
       senderAvatarImage,
-      targetAvatarImage,
-      secondaryTargetAvatarImage,
+      mentionedAvatarImages,
       botAvatarImage,
       senderName,
       groupNicknameText,
@@ -101,8 +98,7 @@ export async function handleGenerateWithPreparedInput(
   texts: string[],
   images: PreparedImages,
   senderAvatarImage?: PreparedAvatarImage,
-  targetAvatarImage?: PreparedAvatarImage,
-  secondaryTargetAvatarImage?: PreparedAvatarImage,
+  mentionedAvatarImages: PreparedImages = [],
   botAvatarImage?: PreparedAvatarImage,
   senderName?: string,
   groupNicknameText?: string,
@@ -115,8 +111,7 @@ export async function handleGenerateWithPreparedInput(
     params: info.params_type,
     config,
     senderAvatarImage,
-    targetAvatarImage,
-    secondaryTargetAvatarImage,
+    mentionedAvatarImages,
     botAvatarImage,
     senderName,
     groupNicknameText,

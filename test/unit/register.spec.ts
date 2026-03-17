@@ -28,6 +28,7 @@ vi.mock("../../src/command/key-resolver", () => ({
 
 const avatarMocks = vi.hoisted(() => ({
   getSenderAvatarImage: vi.fn(async () => undefined),
+  getMentionedAvatarImages: vi.fn(async () => []),
   getMentionedTargetAvatarImage: vi.fn(async () => undefined),
   getMentionedSecondaryAvatarImage: vi.fn(async () => undefined),
   getBotAvatarImage: vi.fn(async () => undefined),
@@ -39,6 +40,7 @@ const avatarMocks = vi.hoisted(() => ({
 
 vi.mock("../../src/utils/avatar", () => ({
   getSenderAvatarImage: avatarMocks.getSenderAvatarImage,
+  getMentionedAvatarImages: avatarMocks.getMentionedAvatarImages,
   getMentionedTargetAvatarImage: avatarMocks.getMentionedTargetAvatarImage,
   getMentionedSecondaryAvatarImage:
     avatarMocks.getMentionedSecondaryAvatarImage,
@@ -349,6 +351,7 @@ function createMiddlewareSession(
 
 function resetCommonMocks() {
   avatarMocks.getSenderAvatarImage.mockReset();
+  avatarMocks.getMentionedAvatarImages.mockReset();
   avatarMocks.getMentionedTargetAvatarImage.mockReset();
   avatarMocks.getMentionedSecondaryAvatarImage.mockReset();
   avatarMocks.getBotAvatarImage.mockReset();
@@ -357,6 +360,7 @@ function resetCommonMocks() {
   avatarMocks.resolveAvatarImageByUserId.mockReset();
   avatarMocks.resolveDisplayNameByUserId.mockReset();
   avatarMocks.getSenderAvatarImage.mockResolvedValue(undefined);
+  avatarMocks.getMentionedAvatarImages.mockResolvedValue([]);
   avatarMocks.getMentionedTargetAvatarImage.mockResolvedValue(undefined);
   avatarMocks.getMentionedSecondaryAvatarImage.mockResolvedValue(undefined);
   avatarMocks.getBotAvatarImage.mockResolvedValue(undefined);
@@ -443,14 +447,13 @@ describe("registerCommands", () => {
     );
 
     await flushReadyHandlers(readyHandlers);
-    expect(loggerWarn).not.toHaveBeenCalledWith(
-      "chatluna_character.getTemp 不可用，XML 工具不会启用",
-    );
+    expect(loggerWarn).not.toHaveBeenCalled();
 
     const delayedCharacterService = createMockCharacterService();
     setCharacterService(delayedCharacterService);
     triggerInjectHandlers();
 
+    expect(loggerWarn).not.toHaveBeenCalled();
     expect(ctx.chatluna_character.getTemp).not.toBe(
       delayedCharacterService.getTemp,
     );
@@ -929,33 +932,33 @@ describe("registerCommands", () => {
     expect(generateMock).toHaveBeenCalledWith("qizhu", [], ["你好"], {});
   });
 
-  it("模板需两图且输入两个@用户时应优先使用两个被@头像", async () => {
+  it("模板需 1-2 图且输入两个@用户时应优先使用两个被@头像", async () => {
     const senderAvatar = {
-      data: new Uint8Array([1]),
-      filename: "sender.png",
+      data: new Uint8Array([11]),
+      filename: "sender-1-2.png",
       mimeType: "image/png",
     };
     const targetAvatar = {
-      data: new Uint8Array([2]),
-      filename: "target.png",
+      data: new Uint8Array([12]),
+      filename: "target-1-2.png",
       mimeType: "image/png",
     };
     const secondaryTargetAvatar = {
-      data: new Uint8Array([3]),
-      filename: "target2.png",
+      data: new Uint8Array([13]),
+      filename: "target-1-2-secondary.png",
       mimeType: "image/png",
     };
 
     avatarMocks.getSenderAvatarImage.mockResolvedValue(senderAvatar);
-    avatarMocks.getMentionedTargetAvatarImage.mockResolvedValue(targetAvatar);
-    avatarMocks.getMentionedSecondaryAvatarImage.mockResolvedValue(
+    avatarMocks.getMentionedAvatarImages.mockResolvedValue([
+      targetAvatar,
       secondaryTargetAvatar,
-    );
+    ]);
 
     getInfoMock.mockResolvedValue({
       key: "qizhu",
       params_type: {
-        min_images: 2,
+        min_images: 1,
         max_images: 2,
         min_texts: 0,
         max_texts: 1,
@@ -974,7 +977,7 @@ describe("registerCommands", () => {
       ctx,
       createBaseConfig({
         allowMentionPrefixDirectAliasTrigger: true,
-        autoFillSenderAndBotAvatarsWhenMinImagesTwoAndNoImage: true,
+        autoUseAvatarWhenMinImagesOneAndNoImage: true,
       }),
     );
     await flushReadyHandlers(readyHandlers);
@@ -993,31 +996,139 @@ describe("registerCommands", () => {
     );
   });
 
-  it("关闭前置@允许时 @用户 meme 应放行给下游", async () => {
-    const { ctx, middlewareHandlers } = createMockContext();
+  it("模板需 1-多图且输入两个@用户时应优先使用两个被@头像", async () => {
+    const senderAvatar = {
+      data: new Uint8Array([21]),
+      filename: "sender-1-n.png",
+      mimeType: "image/png",
+    };
+    const targetAvatar = {
+      data: new Uint8Array([22]),
+      filename: "target-1-n.png",
+      mimeType: "image/png",
+    };
+    const secondaryTargetAvatar = {
+      data: new Uint8Array([23]),
+      filename: "target-1-n-secondary.png",
+      mimeType: "image/png",
+    };
+
+    avatarMocks.getSenderAvatarImage.mockResolvedValue(senderAvatar);
+    avatarMocks.getMentionedAvatarImages.mockResolvedValue([
+      targetAvatar,
+      secondaryTargetAvatar,
+    ]);
+
+    getInfoMock.mockResolvedValue({
+      key: "qizhu",
+      params_type: {
+        min_images: 1,
+        max_images: 9,
+        min_texts: 0,
+        max_texts: 1,
+        default_texts: [],
+      },
+      keywords: [],
+      shortcuts: [],
+      tags: [],
+      date_created: "2026-01-01T00:00:00",
+      date_modified: "2026-01-01T00:00:00",
+    });
+
+    const { ctx, readyHandlers, matchHandlers } = createMockContext();
 
     registerCommands(
       ctx,
       createBaseConfig({
-        allowLeadingAtBeforeCommand: false,
+        allowMentionPrefixDirectAliasTrigger: true,
+        autoUseAvatarWhenMinImagesOneAndNoImage: true,
       }),
     );
+    await flushReadyHandlers(readyHandlers);
 
-    expect(middlewareHandlers).toHaveLength(1);
-    const middleware = middlewareHandlers[0] as MiddlewareHandler;
-    const session = createMiddlewareSession(
-      '<at id="10001"/> meme can_can_need',
-      "",
+    const session = createSession("骑猪 @10002 @10003", [
+      { type: "at", attrs: { id: "10002" }, children: [] },
+      { type: "at", attrs: { id: "10003" }, children: [] },
+    ]);
+
+    await expect(matchHandlers[0](session)).resolves.toBeTruthy();
+    expect(generateMock).toHaveBeenCalledWith(
+      "qizhu",
+      [targetAvatar, secondaryTargetAvatar],
       [],
-      { atSelf: false },
+      {},
     );
-    const next = vi.fn(async () => "next-ok");
+  });
 
-    await middleware(session, next);
+  it("模板需 1-3 图且输入三个@用户时应按顺序使用三个被@头像", async () => {
+    const senderAvatar = {
+      data: new Uint8Array([31]),
+      filename: "sender-1-3.png",
+      mimeType: "image/png",
+    };
+    const targetAvatar = {
+      data: new Uint8Array([32]),
+      filename: "target-1-3.png",
+      mimeType: "image/png",
+    };
+    const secondaryTargetAvatar = {
+      data: new Uint8Array([33]),
+      filename: "target-1-3-secondary.png",
+      mimeType: "image/png",
+    };
+    const thirdTargetAvatar = {
+      data: new Uint8Array([34]),
+      filename: "target-1-3-third.png",
+      mimeType: "image/png",
+    };
 
-    expect(next).toHaveBeenCalledTimes(1);
-    expect(session.execute).not.toHaveBeenCalled();
-    expect(session.send).not.toHaveBeenCalled();
+    avatarMocks.getSenderAvatarImage.mockResolvedValue(senderAvatar);
+    avatarMocks.getMentionedAvatarImages.mockResolvedValue([
+      targetAvatar,
+      secondaryTargetAvatar,
+      thirdTargetAvatar,
+    ]);
+
+    getInfoMock.mockResolvedValue({
+      key: "qizhu",
+      params_type: {
+        min_images: 1,
+        max_images: 3,
+        min_texts: 0,
+        max_texts: 1,
+        default_texts: [],
+      },
+      keywords: [],
+      shortcuts: [],
+      tags: [],
+      date_created: "2026-01-01T00:00:00",
+      date_modified: "2026-01-01T00:00:00",
+    });
+
+    const { ctx, readyHandlers, matchHandlers } = createMockContext();
+
+    registerCommands(
+      ctx,
+      createBaseConfig({
+        allowMentionPrefixDirectAliasTrigger: true,
+        autoUseAvatarWhenMinImagesOneAndNoImage: true,
+      }),
+    );
+    await flushReadyHandlers(readyHandlers);
+
+    const session = createSession("骑猪 @10002 @10003 @10004", [
+      { type: "at", attrs: { id: "10002" }, children: [] },
+      { type: "at", attrs: { id: "10003" }, children: [] },
+      { type: "at", attrs: { id: "10004" }, children: [] },
+    ]);
+
+    await expect(matchHandlers[0](session)).resolves.toBeTruthy();
+    expect(generateMock).toHaveBeenCalledWith(
+      "qizhu",
+      [targetAvatar, secondaryTargetAvatar, thirdTargetAvatar],
+      [],
+      {},
+    );
   });
 
   it("关闭前置@允许时 @bot meme 应放行给下游", async () => {
