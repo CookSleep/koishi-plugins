@@ -5,19 +5,19 @@
 
 export type OneBotProtocol = "napcat" | "llbot";
 
+export interface NativeToolItemConfig {
+  enabled: boolean;
+  toolName: string;
+}
+
 export interface NativeToolsConfig {
   enableNapCatProtocol: boolean;
   enableLlbotProtocol: boolean;
-  enablePokeTool: boolean;
-  pokeToolName: string;
-  enableSetSelfProfileTool: boolean;
-  setSelfProfileToolName: string;
-  enableSetGroupCardTool: boolean;
-  setGroupCardToolName: string;
-  enableSetMsgEmojiTool: boolean;
-  setMsgEmojiToolName: string;
-  enableDeleteMessageTool: boolean;
-  deleteMessageToolName: string;
+  poke: NativeToolItemConfig;
+  setSelfProfile: NativeToolItemConfig;
+  setGroupCard: NativeToolItemConfig;
+  setMsgEmoji: NativeToolItemConfig;
+  deleteMessage: NativeToolItemConfig;
 }
 
 export interface XmlToolsConfig {

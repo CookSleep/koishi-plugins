@@ -11,12 +11,25 @@ import { createSetGroupCardTool } from "./tools/set-group-card";
 import { createSetMsgEmojiTool } from "./tools/set-msg-emoji";
 import { createSetProfileTool } from "./tools/profile";
 
+export interface NativeToolRegistration {
+  selector: () => boolean;
+  authorization: (session: Session) => boolean;
+  createTool: () => unknown;
+}
+
 export interface RegisterNativeToolsDeps {
   ctx: import("koishi").Context;
   config: Config;
-  plugin: { registerTool: (name: string, tool: any) => void };
+  plugin: {
+    registerTool: (name: string, tool: NativeToolRegistration) => void;
+  };
   protocol: OneBotProtocol;
   log?: LogFn;
+}
+
+function resolveToolName(value: string, fallback: string): string {
+  const trimmedValue = value.trim();
+  return trimmedValue || fallback;
 }
 
 export function resolveOneBotProtocol(
@@ -36,8 +49,8 @@ export function resolveOneBotProtocol(
 export function registerNativeTools(deps: RegisterNativeToolsDeps): void {
   const { ctx, config, plugin, protocol, log } = deps;
 
-  if (config.enablePokeTool) {
-    const toolName = String(config.pokeToolName || "poke_user").trim();
+  if (config.poke.enabled) {
+    const toolName = resolveToolName(config.poke.toolName, "poke_user");
     plugin.registerTool(toolName, {
       selector: () => true,
       authorization: (session: Session) => session?.platform === "onebot",
@@ -46,10 +59,11 @@ export function registerNativeTools(deps: RegisterNativeToolsDeps): void {
     log?.("info", `戳一戳工具已注册: ${toolName}`);
   }
 
-  if (config.enableSetSelfProfileTool) {
-    const toolName = String(
-      config.setSelfProfileToolName || "set_self_profile",
-    ).trim();
+  if (config.setSelfProfile.enabled) {
+    const toolName = resolveToolName(
+      config.setSelfProfile.toolName,
+      "set_self_profile",
+    );
     plugin.registerTool(toolName, {
       selector: () => true,
       authorization: (session: Session) => session?.platform === "onebot",
@@ -58,10 +72,11 @@ export function registerNativeTools(deps: RegisterNativeToolsDeps): void {
     log?.("info", `设置资料工具已注册: ${toolName}`);
   }
 
-  if (config.enableSetGroupCardTool) {
-    const toolName = String(
-      config.setGroupCardToolName || "set_group_card",
-    ).trim();
+  if (config.setGroupCard.enabled) {
+    const toolName = resolveToolName(
+      config.setGroupCard.toolName,
+      "set_group_card",
+    );
     plugin.registerTool(toolName, {
       selector: () => true,
       authorization: (session: Session) => session?.platform === "onebot",
@@ -70,10 +85,11 @@ export function registerNativeTools(deps: RegisterNativeToolsDeps): void {
     log?.("info", `群昵称工具已注册: ${toolName}`);
   }
 
-  if (config.enableSetMsgEmojiTool) {
-    const toolName = String(
-      config.setMsgEmojiToolName || "set_msg_emoji",
-    ).trim();
+  if (config.setMsgEmoji.enabled) {
+    const toolName = resolveToolName(
+      config.setMsgEmoji.toolName,
+      "set_msg_emoji",
+    );
     plugin.registerTool(toolName, {
       selector: () => true,
       authorization: (session: Session) => session?.platform === "onebot",
@@ -82,10 +98,11 @@ export function registerNativeTools(deps: RegisterNativeToolsDeps): void {
     log?.("info", `消息表情工具已注册: ${toolName}`);
   }
 
-  if (config.enableDeleteMessageTool) {
-    const toolName = String(
-      config.deleteMessageToolName || "delete_msg",
-    ).trim();
+  if (config.deleteMessage.enabled) {
+    const toolName = resolveToolName(
+      config.deleteMessage.toolName,
+      "delete_msg",
+    );
     plugin.registerTool(toolName, {
       selector: () => true,
       authorization: (session: Session) => session?.platform === "onebot",
