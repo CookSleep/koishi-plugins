@@ -26,6 +26,7 @@ export const DEFAULT_SCHEDULE_CONFIG = {
   startDelay: 3000,
   registerTool: true,
   toolName: "daily_schedule",
+  toolDescription: "获取今日日程文本内容。",
 };
 
 export const DEFAULT_WEATHER_CONFIG: WeatherConfig = {
@@ -34,6 +35,7 @@ export const DEFAULT_WEATHER_CONFIG: WeatherConfig = {
   hourlyRefresh: false,
   registerTool: false,
   toolName: "get_weather",
+  toolDescription: "获取当前天气信息，可返回详细文本或当前时段天气。",
 };
 
 export const DEFAULT_VARIABLES_CONFIG: VariablesConfig = {
@@ -94,6 +96,9 @@ const scheduleSchema = Schema.object({
   toolName: Schema.string()
     .default(DEFAULT_SCHEDULE_CONFIG.toolName)
     .description("工具名称"),
+  toolDescription: Schema.string()
+    .default(DEFAULT_SCHEDULE_CONFIG.toolDescription)
+    .description("工具描述"),
 });
 
 const weatherSchema = Schema.object({
@@ -112,6 +117,9 @@ const weatherSchema = Schema.object({
   toolName: Schema.string()
     .default(DEFAULT_WEATHER_CONFIG.toolName || "get_weather")
     .description("工具名称"),
+  toolDescription: Schema.string()
+    .default(DEFAULT_WEATHER_CONFIG.toolDescription)
+    .description("工具描述"),
 });
 
 const variablesSchema = Schema.object({

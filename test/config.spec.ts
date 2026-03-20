@@ -21,6 +21,7 @@ describe("resolveVariablesConfig", () => {
         startDelay: 1000,
         registerTool: true,
         toolName: "daily_schedule",
+        toolDescription: "获取今日日程文本内容。",
       },
       weather: {
         enabled: true,
@@ -28,6 +29,7 @@ describe("resolveVariablesConfig", () => {
         hourlyRefresh: false,
         registerTool: true,
         toolName: "get_weather",
+        toolDescription: "获取当前天气信息，可返回详细文本或当前时段天气。",
       },
       variables: {
         schedule: "todaySchedule",
@@ -61,6 +63,7 @@ describe("resolveVariablesConfig", () => {
         startDelay: 1000,
         registerTool: true,
         toolName: "daily_schedule",
+        toolDescription: "获取今日日程文本内容。",
         variableName: "legacySchedule",
         currentVariableName: "legacyCurrentSchedule",
         outfitVariableName: "legacyOutfit",
@@ -72,6 +75,7 @@ describe("resolveVariablesConfig", () => {
         hourlyRefresh: false,
         registerTool: true,
         toolName: "get_weather",
+        toolDescription: "获取当前天气信息，可返回详细文本或当前时段天气。",
         variableName: "legacyWeather",
       },
     } as never);

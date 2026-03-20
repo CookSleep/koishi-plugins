@@ -4,6 +4,7 @@
  */
 
 import { resolveVariablesConfig } from "../config";
+import { DEFAULT_WEATHER_CONFIG } from "../schema";
 import { StructuredTool } from "@langchain/core/tools";
 import type { Context, Session } from "koishi";
 import { z } from "zod";
@@ -86,13 +87,16 @@ export function registerChatLunaIntegrations(
     if (config.weather.registerTool) {
       const weatherToolName =
         (config.weather.toolName || "get_weather").trim() || "get_weather";
+      const weatherToolDescription =
+        (config.weather.toolDescription || "").trim() ||
+        DEFAULT_WEATHER_CONFIG.toolDescription;
       plugin.registerTool(weatherToolName, {
         selector: () => true,
         createTool: () =>
           // @ts-expect-error zod 和 StructuredTool 组合会触发推导深度限制
           new (class extends StructuredTool {
             name = weatherToolName;
-            description = "获取当前天气信息，可返回详细文本或当前时段天气。";
+            description = weatherToolDescription;
             schema = z.object({
               mode: z
                 .enum(["text", "hourly"])

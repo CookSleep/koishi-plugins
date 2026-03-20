@@ -7,6 +7,7 @@ import { StructuredTool } from "@langchain/core/tools";
 import { h, type Context, type Session } from "koishi";
 import { z } from "zod";
 import { resolveVariablesConfig } from "../config";
+import { DEFAULT_SCHEDULE_CONFIG } from "../schema";
 import type {
   ChatLunaPlugin,
   Config,
@@ -191,6 +192,7 @@ export function createScheduleService(
     renderAsImage: false,
     startDelay: 3000,
     toolName: "daily_schedule",
+    toolDescription: DEFAULT_SCHEDULE_CONFIG.toolDescription,
     prompt: "",
   };
 
@@ -627,7 +629,11 @@ export function createScheduleService(
   const registerTool = (plugin: ChatLunaPlugin): string | null => {
     if (!enabled || scheduleConfig.registerTool === false) return null;
 
-    const toolName = scheduleConfig.toolName || "daily_schedule";
+    const toolName =
+      (scheduleConfig.toolName || "daily_schedule").trim() || "daily_schedule";
+    const toolDescription =
+      scheduleConfig.toolDescription?.trim() ||
+      DEFAULT_SCHEDULE_CONFIG.toolDescription;
 
     plugin.registerTool(toolName, {
       selector: () => true,
@@ -635,7 +641,7 @@ export function createScheduleService(
         // @ts-expect-error zod 和 StructuredTool 的推导深度过大
         new (class extends StructuredTool {
           name = toolName;
-          description = "Returns today schedule as plain text.";
+          description = toolDescription;
           schema = z.object({});
 
           async _call(

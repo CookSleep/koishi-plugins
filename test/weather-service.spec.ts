@@ -55,6 +55,7 @@ describe("weather service", () => {
         hourlyRefresh: false,
         registerTool: true,
         toolName: "get_weather",
+        toolDescription: "获取当前天气信息，可返回详细文本或当前时段天气。",
       },
       log: () => {},
     });
@@ -75,6 +76,7 @@ describe("weather service", () => {
         hourlyRefresh: false,
         registerTool: false,
         toolName: "get_weather",
+        toolDescription: "获取当前天气信息，可返回详细文本或当前时段天气。",
       },
       log: () => {},
     });

@@ -24,6 +24,7 @@ export interface ScheduleConfig {
   renderAsImage: boolean;
   startDelay: number;
   toolName: string;
+  toolDescription: string;
   prompt: string;
   title?: string;
 }
@@ -34,6 +35,7 @@ export interface WeatherConfig {
   hourlyRefresh: boolean;
   registerTool: boolean;
   toolName: string;
+  toolDescription: string;
 }
 
 export interface VariablesConfig {
