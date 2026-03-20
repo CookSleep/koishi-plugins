@@ -83,11 +83,6 @@ const AffinityDynamicsSchema = Schema.object({
 
 export const AffinitySchema = Schema.object({
   affinityEnabled: Schema.boolean().default(true).description("启用好感度系统"),
-  affinityDisplayRange: Schema.number()
-    .default(1)
-    .min(1)
-    .step(1)
-    .description("显示当前上下文中多少位用户的好感度信息"),
   initialAffinity: Schema.number()
     .default(BASE_AFFINITY_DEFAULTS.initialAffinity)
     .description("初始长期好感度默认值"),

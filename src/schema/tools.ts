@@ -80,6 +80,11 @@ export const VariableSettingsSchema = Schema.object({
     .description(
       '好感度变量名称，调用示例：{affinity("scopeId")}，请将 scopeId 替换为你设定的实际 scopeId。返回格式为文本行，包含 id、name、nickname、affinity、relationship；当展示范围大于 1 时会返回多行。',
     ),
+  affinityDisplayRange: Schema.number()
+    .default(1)
+    .min(1)
+    .step(1)
+    .description("显示当前上下文中多少位用户的好感度信息"),
   relationshipLevelVariableName: Schema.string()
     .default("relationshipLevel")
     .description(
