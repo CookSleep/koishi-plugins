@@ -5,7 +5,7 @@
 
 import { Schema } from "koishi";
 import { DEFAULT_SCHEDULE_PROMPT } from "./constants";
-import type { Config, ScheduleConfig, WeatherConfig } from "./types";
+import type { Config, WeatherConfig } from "./types";
 
 export const name = "chatluna-schedule";
 
@@ -14,10 +14,10 @@ export const inject = {
   optional: ["puppeteer", "chatluna_character"],
 };
 
-export const DEFAULT_SCHEDULE_CONFIG: ScheduleConfig = {
+export const DEFAULT_SCHEDULE_CONFIG = {
   enabled: true,
   model: "",
-  personaSource: "none",
+  personaSource: "none" as const,
   personaChatlunaPreset: "无",
   personaCustomPreset: "",
   variableName: "schedule",
@@ -126,14 +126,20 @@ const weatherSchema = Schema.object({
     .description("工具名称"),
 });
 
-export const ConfigSchema: Schema<Config> = Schema.object({
-  schedule: scheduleSchema
-    .default(DEFAULT_SCHEDULE_CONFIG)
-    .description("日程设置"),
-  weather: weatherSchema
-    .default(DEFAULT_WEATHER_CONFIG)
-    .description("天气设置"),
+const otherSchema = Schema.object({
   debugLogging: Schema.boolean().default(false).description("是否输出调试日志"),
-}) as Schema<Config>;
+}).description("其他设置");
+
+export const ConfigSchema: Schema<Config> = Schema.intersect([
+  Schema.object({
+    schedule: scheduleSchema
+      .default(DEFAULT_SCHEDULE_CONFIG)
+      .description("日程设置"),
+    weather: weatherSchema
+      .default(DEFAULT_WEATHER_CONFIG)
+      .description("天气设置"),
+  }),
+  otherSchema,
+]) as Schema<Config>;
 
 export { ConfigSchema as Config };
