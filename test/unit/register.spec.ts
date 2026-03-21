@@ -2263,6 +2263,77 @@ describe("registerCommands", () => {
     randomSpy.mockRestore();
   });
 
+  it("meme.random 命中模板生成失败时应跳过当前模板并继续尝试下一个候选", async () => {
+    const commandActions = new Map<
+      string,
+      (...args: any[]) => Promise<unknown>
+    >();
+    const { ctx, readyHandlers } = createMockContext();
+    ctx.command = vi.fn((name: string) => ({
+      action: vi.fn((handler: (...args: any[]) => Promise<unknown>) => {
+        commandActions.set(name, handler);
+        return { action: vi.fn() };
+      }),
+    }));
+
+    getKeysMock.mockResolvedValue(["first", "second"]);
+    getInfoMock.mockImplementation(async (key: string) =>
+      createRandomMemeInfo(key, {
+        min_images: 0,
+        max_images: 0,
+        min_texts: 1,
+        max_texts: 1,
+        default_texts: [],
+      }),
+    );
+
+    generateMock
+      .mockRejectedValueOnce(new Error("文本“1231231231...”过长"))
+      .mockResolvedValueOnce({
+        buffer: new Uint8Array([4, 5, 6]).buffer,
+        mimeType: "image/png",
+      });
+
+    const randomSpy = vi
+      .spyOn(Math, "random")
+      .mockReturnValueOnce(0.1)
+      .mockReturnValueOnce(0.9)
+      .mockReturnValueOnce(0)
+      .mockReturnValueOnce(0);
+
+    registerCommands(ctx, createBaseConfig());
+    await flushReadyHandlers(readyHandlers);
+
+    const randomAction = commandActions.get("meme.random [...texts]");
+    expect(randomAction).toBeDefined();
+
+    const result = await randomAction!(
+      { session: createSession("meme.random") },
+      "1231231231...",
+    );
+
+    expect(generateMock).toHaveBeenCalledTimes(2);
+    expect(generateMock).toHaveBeenNthCalledWith(
+      1,
+      "first",
+      [],
+      ["1231231231..."],
+      {},
+    );
+    expect(generateMock).toHaveBeenNthCalledWith(
+      2,
+      "second",
+      [],
+      ["1231231231..."],
+      {},
+    );
+    expect(result).toBeTruthy();
+    expect(typeof result).not.toBe("string");
+    expect(String(result)).not.toContain("random key: first");
+
+    randomSpy.mockRestore();
+  });
+
   it("meme.random 关键词提示关闭时不应额外发送触发提示", async () => {
     const commandActions = new Map<
       string,

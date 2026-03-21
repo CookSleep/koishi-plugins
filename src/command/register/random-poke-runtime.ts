@@ -407,12 +407,65 @@ export function installRandomRuntime(
           candidatesForPick = eligibleCandidates;
         }
 
-        const pickedBucket = pickRandomBucketByWeight(
-          candidatesForPick,
-          config.randomMemeBucketWeightRules,
-        );
-        const randomCandidate = pickRandomItem(pickedBucket?.candidates ?? []);
-        if (!randomCandidate) {
+        let remainingCandidates = candidatesForPick;
+        let lastFailedKey: string | undefined;
+        let lastRuntimeMessage: string | undefined;
+
+        while (remainingCandidates.length > 0) {
+          const pickedBucket = pickRandomBucketByWeight(
+            remainingCandidates,
+            config.randomMemeBucketWeightRules,
+          );
+          const randomCandidate = pickRandomItem(
+            pickedBucket?.candidates ?? [],
+          );
+          if (!randomCandidate) break;
+
+          try {
+            logger.info("meme trigger key: %s", randomCandidate.key);
+            const result = await handleGenerateWithPreparedInput(
+              randomCandidate.key,
+              parsedInput.texts,
+              parsedInput.images,
+              senderAvatarImage,
+              mentionedAvatarImages,
+              botAvatarImage,
+              senderName,
+              groupNicknameText,
+              randomCandidate.selectedTextSource,
+            );
+
+            randomSelectionHistory = recordRandomSelection(
+              historyForRecord,
+              randomCandidate.key,
+              randomDedupeConfig,
+            );
+
+            if (config.enableRandomKeywordNotice) {
+              const aliasText = randomCandidate.directAlias || "（无中文别名）";
+              return [
+                `key：${randomCandidate.key}`,
+                `别名：${aliasText}`,
+                stringifyImageSegment(result),
+              ].join("\n");
+            }
+
+            return result;
+          } catch (error) {
+            lastFailedKey = randomCandidate.key;
+            lastRuntimeMessage = mapRuntimeErrorMessage(error);
+            logger.warn(
+              "meme.random generate failed for key %s: %s",
+              randomCandidate.key,
+              lastRuntimeMessage,
+            );
+            remainingCandidates = remainingCandidates.filter(
+              (candidate) => candidate.key !== randomCandidate.key,
+            );
+          }
+        }
+
+        if (candidatesForPick.length === 0) {
           if (infoFailedCount === filteredShuffledKeys.length) {
             return handleErrorReply(
               "meme.random",
@@ -427,46 +480,17 @@ export function installRandomRuntime(
           );
         }
 
-        try {
-          logger.info("meme trigger key: %s", randomCandidate.key);
-          const result = await handleGenerateWithPreparedInput(
-            randomCandidate.key,
-            parsedInput.texts,
-            parsedInput.images,
-            senderAvatarImage,
-            mentionedAvatarImages,
-            botAvatarImage,
-            senderName,
-            groupNicknameText,
-            randomCandidate.selectedTextSource,
+        if (config.disableErrorReplyToPlatform) {
+          logger.warn(
+            "meme.random failed: %s",
+            lastRuntimeMessage ?? "未知错误",
           );
-
-          randomSelectionHistory = recordRandomSelection(
-            historyForRecord,
-            randomCandidate.key,
-            randomDedupeConfig,
-          );
-
-          if (config.enableRandomKeywordNotice) {
-            const aliasText = randomCandidate.directAlias || "（无中文别名）";
-            return [
-              `key：${randomCandidate.key}`,
-              `别名：${aliasText}`,
-              stringifyImageSegment(result),
-            ].join("\n");
-          }
-
-          return result;
-        } catch (error) {
-          const runtimeMessage = mapRuntimeErrorMessage(error);
-          if (config.disableErrorReplyToPlatform) {
-            logger.warn("meme.random failed: %s", runtimeMessage);
-            return "";
-          }
-          return [`random key: ${randomCandidate.key}`, runtimeMessage].join(
-            "\n",
-          );
+          return "";
         }
+        return [
+          `random key: ${lastFailedKey ?? "unknown"}`,
+          lastRuntimeMessage ?? "生成失败，请稍后重试。",
+        ].join("\n");
       };
 
       if (!config.enableRandomDedupeWithinHours) {
