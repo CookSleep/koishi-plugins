@@ -1,0 +1,16 @@
+{
+  "name": "koishi-plugins",
+  "version": "1.0.0",
+  "private": true,
+  "packageManager": "pnpm@10.27.0",
+  "workspaces": [
+    "plugins/*",
+    "plugins/*/packages/*",
+    "plugins/*/external/*"
+  ],
+  "scripts": {
+    "build": "pnpm -r --if-present run build",
+    "test": "pnpm -r --if-present run test"
+  },
+  "license": "MIT"
+}
