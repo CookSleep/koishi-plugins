@@ -1,7 +1,0 @@
-node_modules/
-lib/
-coverage/
-*.log
-.DS_Store
-.claude/*
-!.claude/AGENTS.md

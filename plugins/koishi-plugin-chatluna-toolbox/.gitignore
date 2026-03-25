@@ -1,9 +1,0 @@
-node_modules/
-lib/
-dist/
-coverage/
-*.log
-.DS_Store
-tsconfig.tsbuildinfo
-.claude/*
-!.claude/AGENTS.md

@@ -1,7 +1,0 @@
-node_modules/
-lib/
-coverage/
-.vitest/
-*.log
-.DS_Store
-.claude

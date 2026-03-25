@@ -8,3 +8,7 @@ plugins/*/node_modules
 plugins/*/dist
 plugins/*/lib
 plugins/*/coverage
+plugins/*/package-lock.json
+plugins/*/.claude
+*.log
+.vitest
