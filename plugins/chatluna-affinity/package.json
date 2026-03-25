@@ -21,10 +21,10 @@
     "koishi",
     "plugin"
   ],
-  "homepage": "https://github.com/Sor85/koishi-plugin-chatluna-affinity",
+  "homepage": "https://github.com/Sor85/koishi-plugins",
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/Sor85/koishi-plugin-chatluna-affinity.git"
+    "url": "https://github.com/Sor85/koishi-plugins.git"
   },
   "peerDependencies": {
     "koishi": "^4.18.7",

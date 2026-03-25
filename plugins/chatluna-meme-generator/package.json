@@ -25,7 +25,7 @@
   "license": "MIT",
   "repository": {
     "type": "git",
-    "url": "https://github.com/Sor85/koishi-plugin-chatluna-meme-generator.git"
+    "url": "https://github.com/Sor85/koishi-plugins.git"
   },
   "peerDependencies": {
     "koishi": "^4.18.0"

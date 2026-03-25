@@ -18,10 +18,10 @@
     "gemini",
     "tools"
   ],
-  "homepage": "https://github.com/Sor85/koishi-plugin-chatluna-gemini-tools",
+  "homepage": "https://github.com/Sor85/koishi-plugins",
   "repository": {
     "type": "git",
-    "url": "https://github.com/Sor85/koishi-plugin-chatluna-gemini-tools"
+    "url": "https://github.com/Sor85/koishi-plugins.git"
   },
   "license": "MIT",
   "peerDependencies": {
