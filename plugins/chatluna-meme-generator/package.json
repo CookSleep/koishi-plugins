@@ -9,30 +9,29 @@
     "README.md"
   ],
   "scripts": {
-    "build": "tsc -p tsconfig.json",
-    "typecheck": "tsc -p tsconfig.json --noEmit",
+    "build": "tsup",
+    "watch": "tsup --watch",
+    "typecheck": "tsc --noEmit",
     "test": "vitest run"
-  },
-  "exports": {
-    ".": "./lib/index.js",
-    "./package.json": "./package.json"
   },
   "keywords": [
     "koishi",
     "meme",
     "chatluna"
   ],
+  "homepage": "https://github.com/Sor85/koishi-plugins",
   "license": "MIT",
   "repository": {
     "type": "git",
     "url": "https://github.com/Sor85/koishi-plugins.git"
   },
   "peerDependencies": {
-    "koishi": "^4.18.0"
+    "koishi": "^4.18.7"
   },
   "devDependencies": {
     "@types/node": "^22.10.1",
-    "koishi": "^4.18.0",
+    "koishi": "^4.18.7",
+    "tsup": "^8.0.0",
     "typescript": "^5.7.2",
     "vitest": "^3.2.4"
   },

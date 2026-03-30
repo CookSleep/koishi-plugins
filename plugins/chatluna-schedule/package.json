@@ -3,7 +3,7 @@
   "description": "ChatLuna 日程与天气插件，提供今日日程和天气变量。",
   "version": "0.0.3",
   "main": "lib/index.js",
-  "typings": "lib/index.d.ts",
+  "types": "lib/index.d.ts",
   "files": [
     "lib"
   ],
@@ -11,13 +11,13 @@
     "type": "git",
     "url": "https://github.com/Sor85/koishi-plugins.git"
   },
+  "homepage": "https://github.com/Sor85/koishi-plugins",
   "license": "MIT",
   "scripts": {
     "build": "tsup",
-    "test": "vitest run",
-    "test:coverage": "vitest run --coverage",
     "watch": "tsup --watch",
-    "clean": "rimraf lib"
+    "typecheck": "tsc --noEmit",
+    "test": "vitest run"
   },
   "keywords": [
     "chatbot",
@@ -37,16 +37,14 @@
     }
   },
   "devDependencies": {
-    "@types/node": "^20.11.0",
-    "@vitest/coverage-v8": "^2.1.8",
+    "@types/node": "^22.10.1",
     "koishi": "^4.18.7",
-    "rimraf": "^5.0.5",
     "tsup": "^8.0.0",
-    "typescript": "^5.3.3",
-    "vitest": "^2.1.8"
+    "typescript": "^5.7.2",
+    "vitest": "^3.2.4"
   },
   "dependencies": {
     "@langchain/core": "^0.3.62",
-    "zod": "^3.23.8"
+    "zod": "^3.25.76"
   }
 }

@@ -3,11 +3,12 @@
   "description": "为 ChatLuna 提供更多原生工具、XML 工具与变量，仅支持 onebot 平台。",
   "version": "0.0.9",
   "main": "lib/index.js",
-  "typings": "lib/index.d.ts",
+  "types": "lib/index.d.ts",
   "files": [
     "lib"
   ],
   "license": "MIT",
+  "homepage": "https://github.com/Sor85/koishi-plugins",
   "repository": {
     "type": "git",
     "url": "https://github.com/Sor85/koishi-plugins.git"
@@ -15,7 +16,6 @@
   "scripts": {
     "build": "tsup",
     "watch": "tsup --watch",
-    "clean": "rimraf lib",
     "typecheck": "tsc --noEmit",
     "test": "vitest run"
   },
@@ -37,13 +37,12 @@
   },
   "dependencies": {
     "@langchain/core": "^0.3.62",
-    "zod": "^3.23.8"
+    "zod": "^3.25.76"
   },
   "devDependencies": {
-    "@types/node": "^20.11.0",
-    "rimraf": "^5.0.5",
+    "@types/node": "^22.10.1",
     "tsup": "^8.0.0",
-    "typescript": "^5.3.3",
-    "vitest": "^2.1.9"
+    "typescript": "^5.7.2",
+    "vitest": "^3.2.4"
   }
 }

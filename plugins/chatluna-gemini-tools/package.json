@@ -8,9 +8,10 @@
     "lib"
   ],
   "scripts": {
-    "build": "tsc -p tsconfig.json",
-    "test": "vitest run",
-    "coverage": "vitest run --coverage"
+    "build": "tsup",
+    "watch": "tsup --watch",
+    "typecheck": "tsc --noEmit",
+    "test": "vitest run"
   },
   "keywords": [
     "koishi",
@@ -25,7 +26,7 @@
   },
   "license": "MIT",
   "peerDependencies": {
-    "koishi": "^4.17.0",
+    "koishi": "^4.18.7",
     "koishi-plugin-chatluna": "*"
   },
   "dependencies": {
@@ -33,8 +34,9 @@
     "zod": "^3.25.76"
   },
   "devDependencies": {
-    "typescript": "^5.9.2",
-    "vitest": "^3.2.4",
-    "@types/node": "^24.3.0"
+    "@types/node": "^22.10.1",
+    "tsup": "^8.0.0",
+    "typescript": "^5.7.2",
+    "vitest": "^3.2.4"
   }
 }
